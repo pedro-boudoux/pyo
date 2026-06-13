@@ -10,12 +10,18 @@ CRITICAL caching contract: every embedding is cached by its unique tag string in
 across thousands of songs, so each unique tag is encoded **once** and reused. The
 backfill is only fast if this cache is solid — never encode per song.
 """
+import threading
+
 import numpy as np
 
 from app.config import TAG_ENCODER_MODEL, TAG_EMBEDDING_DIM
 from app.db import get_cursor
 
 _model = None
+# Serialize encode calls: the backfill runs several worker threads, and the ONNX
+# session / tokenizer aren't guaranteed thread-safe. Cache hits never reach here,
+# so contention is negligible in steady state.
+_encode_lock = threading.Lock()
 
 
 def _get_model():
@@ -30,7 +36,8 @@ def _get_model():
 
 def _encode(tags: list[str]) -> list[np.ndarray]:
     """Encode a batch of tag strings to numpy vectors (no caching)."""
-    return list(_get_model().embed(tags))
+    with _encode_lock:
+        return list(_get_model().embed(tags))
 
 
 def get_tag_embeddings(tags: list[str]) -> dict[str, np.ndarray]:
