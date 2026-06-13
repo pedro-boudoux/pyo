@@ -70,7 +70,7 @@ class TestGetOrCreateTagIds:
         assert ids["jazz"] == 1
         assert ids["hyperpop"] == 5
         assert cur.insert_count == 1
-from app.config import EMBEDDING_DIM
+from app.config import EMBEDDING_DIM, TAG_EMBEDDING_DIM
 from tests.conftest import make_fake_get_cursor
 
 
@@ -79,20 +79,16 @@ from tests.conftest import make_fake_get_cursor
 # ---------------------------------------------------------------------------
 
 class TestDominantTags:
-    def _vec(self, slot_to_weight):
-        v = [0.0] * EMBEDDING_DIM
-        for slot, w in slot_to_weight.items():
-            v[slot] = w
-        return v
+    """dominant_tags now aggregates the raw {tag: count} dicts persisted in
+    songs.tags (jsonb), not embedding slots."""
 
-    def test_empty_vectors_returns_empty(self):
-        assert dominant_tags([], {1: "jazz"}, top_n=5) == []
+    def test_empty_input_returns_empty(self):
+        assert dominant_tags([], top_n=5) == []
 
     def test_sums_weight_and_counts_songs(self):
-        # slot 1 = jazz appears in both songs; slot 2 = funk in one
-        vectors = [self._vec({1: 1.0, 2: 0.5}), self._vec({1: 0.5})]
-        id_to_tag = {1: "jazz", 2: "funk"}
-        out = dominant_tags(vectors, id_to_tag, top_n=5)
+        # jazz appears in both songs; funk in one
+        tag_dicts = [{"jazz": 1.0, "funk": 0.5}, {"jazz": 0.5}]
+        out = dominant_tags(tag_dicts, top_n=5)
 
         jazz = next(r for r in out if r["tag"] == "jazz")
         funk = next(r for r in out if r["tag"] == "funk")
@@ -102,21 +98,17 @@ class TestDominantTags:
         assert [r["tag"] for r in out] == ["jazz", "funk"]
 
     def test_share_is_fraction_of_total_weight(self):
-        vectors = [self._vec({1: 3.0, 2: 1.0})]
-        out = dominant_tags(vectors, {1: "a", 2: "b"}, top_n=5)
+        out = dominant_tags([{"a": 3.0, "b": 1.0}], top_n=5)
         shares = {r["tag"]: r["share"] for r in out}
         assert shares["a"] == 0.75 and shares["b"] == 0.25
 
     def test_top_n_caps_results(self):
-        vectors = [self._vec({1: 0.9, 2: 0.8, 3: 0.7, 4: 0.6})]
-        id_to_tag = {1: "a", 2: "b", 3: "c", 4: "d"}
-        out = dominant_tags(vectors, id_to_tag, top_n=2)
+        out = dominant_tags([{"a": 0.9, "b": 0.8, "c": 0.7, "d": 0.6}], top_n=2)
         assert [r["tag"] for r in out] == ["a", "b"]
 
-    def test_slots_without_a_vocab_tag_are_skipped(self):
-        # slot 2 has weight but no entry in id_to_tag → excluded
-        vectors = [self._vec({1: 1.0, 2: 0.9})]
-        out = dominant_tags(vectors, {1: "a"}, top_n=5)
+    def test_none_or_empty_dicts_are_skipped(self):
+        # a null tags column (None) or empty dict contributes nothing
+        out = dominant_tags([None, {}, {"a": 1.0}], top_n=5)
         assert [r["tag"] for r in out] == ["a"]
 
 
@@ -289,63 +281,54 @@ class TestMmrRerank:
 # ---------------------------------------------------------------------------
 
 class TestBuildTagVector:
+    """build_tag_vector is now a count-weighted average of dense MiniLM tag
+    vectors, L2-normalized. The tag encoder is mocked so no model loads."""
+
+    def _patch_encoder(self, monkeypatch, tag_to_vec):
+        import numpy as np
+        emb = {t: np.asarray(v, dtype=float) for t, v in tag_to_vec.items()}
+        monkeypatch.setattr(
+            "app.services.embeddings.tag_encoder.get_tag_embeddings",
+            lambda tags: {t: emb[t] for t in tags if t in emb},
+        )
+
     def test_empty_dict_returns_all_zeros(self):
-        """No DB call needed — empty guard is hit first."""
+        """No encode needed — empty guard is hit first."""
         result = build_tag_vector({})
-        assert len(result) == EMBEDDING_DIM
+        assert len(result) == TAG_EMBEDDING_DIM
         assert all(v == 0.0 for v in result)
 
-    def test_normalization_top_tag_equals_one(self, monkeypatch):
-        """The tag with the highest count maps to 1.0."""
-        vocab = [{"id": 0, "tag": "rock"}, {"id": 1, "tag": "indie"}]
-        monkeypatch.setattr("app.services.embeddings.get_cursor", make_fake_get_cursor(vocab))
-
+    def test_result_is_l2_normalized(self, monkeypatch):
+        self._patch_encoder(monkeypatch, {
+            "rock": [1.0, 0.0, 0.0],
+            "indie": [0.0, 1.0, 0.0],
+        })
         result = build_tag_vector({"rock": 100, "indie": 50})
-        assert result[0] == pytest.approx(1.0)   # rock → slot 0, count/max = 100/100
-        assert result[1] == pytest.approx(0.5)   # indie → slot 1, count/max = 50/100
+        assert len(result) == 3
+        assert math.sqrt(sum(x * x for x in result)) == pytest.approx(1.0)
+        # weighted toward rock (count 100 > 50) → first component larger
+        assert result[0] > result[1] > 0
 
-    def test_tag_not_in_vocab_is_ignored(self, monkeypatch):
-        """Tags absent from the vocab produce no change in the vector."""
-        vocab = [{"id": 0, "tag": "ambient"}]
-        monkeypatch.setattr("app.services.embeddings.get_cursor", make_fake_get_cursor(vocab))
+    def test_weighted_average_direction(self, monkeypatch):
+        # equal, orthogonal tag vectors with equal weight → 45° between them,
+        # each component = 1/sqrt(2) after normalization
+        self._patch_encoder(monkeypatch, {
+            "a": [1.0, 0.0],
+            "b": [0.0, 1.0],
+        })
+        result = build_tag_vector({"a": 10, "b": 10})
+        assert result[0] == pytest.approx(1 / math.sqrt(2))
+        assert result[1] == pytest.approx(1 / math.sqrt(2))
 
-        result = build_tag_vector({"ambient": 80, "unknown_tag": 200})
-        # ambient is in vocab → slot 0 = 1.0 (max is 200 from unknown_tag? No —
-        # normalization uses max of *all* tag_counts values including unknown ones)
-        # max_count = 200, ambient in vocab → vector[0] = 80/200 = 0.4
-        assert result[0] == pytest.approx(0.4)
-        # unknown_tag not in vocab → no slot → all other slots 0
-        assert result[1] == 0.0
+    def test_unencodable_tags_skipped(self, monkeypatch):
+        # only "ambient" has a vector; "unknown" is dropped (encoder returns nothing)
+        self._patch_encoder(monkeypatch, {"ambient": [0.0, 3.0, 4.0]})
+        result = build_tag_vector({"ambient": 80, "unknown": 200})
+        # normalized [0,3,4] → [0, 0.6, 0.8]
+        assert result == pytest.approx([0.0, 0.6, 0.8])
 
-    def test_tags_beyond_embedding_dim_dropped(self, monkeypatch):
-        """Tags whose vocab id >= EMBEDDING_DIM are silently dropped."""
-        # id == EMBEDDING_DIM is the boundary that gets dropped
-        vocab = [
-            {"id": 0, "tag": "jazz"},
-            {"id": EMBEDDING_DIM, "tag": "outofbounds"},
-        ]
-        monkeypatch.setattr("app.services.embeddings.get_cursor", make_fake_get_cursor(vocab))
-
-        result = build_tag_vector({"jazz": 50, "outofbounds": 100})
-        assert len(result) == EMBEDDING_DIM
-        # jazz → slot 0 = 50/100 = 0.5
-        assert result[0] == pytest.approx(0.5)
-        # outofbounds has id == EMBEDDING_DIM → dropped (condition is `< EMBEDDING_DIM`)
-        # no IndexError; vector length stays at EMBEDDING_DIM
-
-    def test_vector_length_is_embedding_dim(self, monkeypatch):
-        vocab = [{"id": 5, "tag": "drone"}]
-        monkeypatch.setattr("app.services.embeddings.get_cursor", make_fake_get_cursor(vocab))
-
-        result = build_tag_vector({"drone": 42})
-        assert len(result) == EMBEDDING_DIM
-
-    def test_single_tag_normalizes_to_one(self, monkeypatch):
-        """Single tag → max_count equals its count → 1.0."""
-        vocab = [{"id": 3, "tag": "ambient"}]
-        monkeypatch.setattr("app.services.embeddings.get_cursor", make_fake_get_cursor(vocab))
-
-        result = build_tag_vector({"ambient": 77})
-        assert result[3] == pytest.approx(1.0)
-        # all other slots are 0
-        assert sum(v for i, v in enumerate(result) if i != 3) == pytest.approx(0.0)
+    def test_no_encodable_tags_returns_zeros(self, monkeypatch):
+        self._patch_encoder(monkeypatch, {})  # nothing encodes
+        result = build_tag_vector({"x": 1, "y": 2})
+        assert len(result) == TAG_EMBEDDING_DIM
+        assert all(v == 0.0 for v in result)

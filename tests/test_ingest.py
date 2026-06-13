@@ -87,6 +87,7 @@ class TestEmbedAndStoreTrackCacheHit:
             "listeners": 10_000,
             "image": "https://example.com/cover.jpg",
             "embedding": stored_vec,
+            "tags": {"dubstep": 100},
         }
 
         monkeypatch.setattr(
@@ -114,7 +115,7 @@ class TestEmbedAndStoreTrackCacheHit:
 
         cached_row = {
             "track_id": tid, "name": name, "artist": artist,
-            "listeners": 5_000, "image": None, "embedding": stored_vec,
+            "listeners": 5_000, "image": None, "embedding": stored_vec, "tags": {"idm": 80},
         }
         monkeypatch.setattr(
             "app.services.ingest.get_cursor",
@@ -139,7 +140,7 @@ class TestEmbedAndStoreTrackCacheHit:
         cached_row = {
             "track_id": tid, "name": name, "artist": artist,
             "listeners": 9_999_999,
-            "image": None, "embedding": stored_vec,
+            "image": None, "embedding": stored_vec, "tags": {"pop": 100},
         }
         monkeypatch.setattr(
             "app.services.ingest.get_cursor",
@@ -163,7 +164,7 @@ class TestEmbedAndStoreTrackCacheHit:
         cached_row = {
             "track_id": tid, "name": name, "artist": artist,
             "listeners": None,
-            "image": None, "embedding": stored_vec,
+            "image": None, "embedding": stored_vec, "tags": {"techno": 50},
         }
         monkeypatch.setattr(
             "app.services.ingest.get_cursor",
@@ -221,10 +222,6 @@ class TestEmbedAndStoreTrackCacheMiss:
             MagicMock(return_value={"idm": 100, "electronic": 40}),
         )
         monkeypatch.setattr(
-            "app.services.ingest.embeddings.get_or_create_tag_ids",
-            MagicMock(return_value={"idm": 0, "electronic": 1}),
-        )
-        monkeypatch.setattr(
             "app.services.ingest.embeddings.build_tag_vector",
             MagicMock(return_value=fake_vec),
         )
@@ -262,7 +259,6 @@ class TestEmbedAndStoreTrackCacheMiss:
         ingest_mod.lastfm.get_track_top_tags.assert_called_once_with(artist, name)
         ingest_mod.lastfm.get_similar_artists.assert_called_once_with(artist)
         ingest_mod.lastfm.blend_tags.assert_called_once()
-        ingest_mod.embeddings.get_or_create_tag_ids.assert_called_once()
         ingest_mod.embeddings.build_tag_vector.assert_called_once()
         ingest_mod.get_cover_url.assert_called_once_with(artist, name)
 
@@ -319,10 +315,6 @@ class TestEmbedAndStoreTrackCacheMiss:
         monkeypatch.setattr(
             "app.services.ingest.lastfm.blend_tags",
             MagicMock(return_value={"jazz": 80}),
-        )
-        monkeypatch.setattr(
-            "app.services.ingest.embeddings.get_or_create_tag_ids",
-            MagicMock(return_value={"jazz": 0}),
         )
         monkeypatch.setattr(
             "app.services.ingest.embeddings.build_tag_vector",

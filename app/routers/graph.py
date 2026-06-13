@@ -59,25 +59,23 @@ def graph_dominant_tags(request: GraphTagsRequest):
     with get_cursor() as cursor:
         if request.track_ids:
             cursor.execute(
-                "SELECT embedding FROM songs WHERE track_id = ANY(%s) AND embedding IS NOT NULL",
+                "SELECT tags FROM songs WHERE track_id = ANY(%s) AND tags IS NOT NULL",
                 (request.track_ids,),
             )
         else:
             cursor.execute("""
-                SELECT embedding FROM songs
-                WHERE embedding IS NOT NULL
+                SELECT tags FROM songs
+                WHERE tags IS NOT NULL
                 AND track_id IN (
                     SELECT track_id FROM graph_nodes
                     UNION SELECT source_id FROM graph_edges
                     UNION SELECT target_id FROM graph_edges
                 )
             """)
-        vectors = [list(r["embedding"]) for r in cursor.fetchall()]
+        # tags is jsonb → psycopg2 hands it back as a Python dict {tag: count}.
+        tag_dicts = [r["tags"] for r in cursor.fetchall()]
 
-        cursor.execute("SELECT id, tag FROM tag_vocab")
-        id_to_tag = {r["id"]: r["tag"] for r in cursor.fetchall()}
-
-    tags = embeddings.dominant_tags(vectors, id_to_tag, request.top_n)
+    tags = embeddings.dominant_tags(tag_dicts, request.top_n)
     return DominantTagsResponse(tags=tags)
 
 

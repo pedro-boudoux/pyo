@@ -3,6 +3,7 @@ uvicorn
 requests
 numpy
 scikit-learn
+fastembed
 psycopg2-binary
 pgvector
 python-dotenv
