@@ -10,6 +10,7 @@ from contextlib import contextmanager
 
 from app.services.embeddings import (
     make_track_id,
+    primary_artist,
     cosine_similarity,
     mmr_rerank,
     build_tag_vector,
@@ -137,6 +138,37 @@ class TestMakeTrackId:
         id1 = make_track_id("Burial", "Archangel")
         id2 = make_track_id("Burial", "Shell of Light")
         assert id1 != id2
+
+
+# ---------------------------------------------------------------------------
+# primary_artist — recover the first credit from a multi-artist string
+# ---------------------------------------------------------------------------
+
+class TestPrimaryArtist:
+    def test_comma_separated_takes_first(self):
+        assert primary_artist("GORDÃO DO PC, Mc Ag, Dj Wesley") == "GORDÃO DO PC"
+
+    def test_feat_variants(self):
+        assert primary_artist("Drake feat. Rihanna") == "Drake"
+        assert primary_artist("Drake ft Rihanna") == "Drake"
+        assert primary_artist("Drake featuring Rihanna") == "Drake"
+
+    def test_ampersand_slash_x_vs(self):
+        assert primary_artist("Calvin Harris & Dua Lipa") == "Calvin Harris"
+        assert primary_artist("Calvin Harris x Dua Lipa") == "Calvin Harris"
+        assert primary_artist("Blur vs Oasis") == "Blur"
+        assert primary_artist("A / B") == "A"
+
+    def test_single_artist_unchanged(self):
+        assert primary_artist("Burial") == "Burial"
+
+    def test_no_false_split_inside_word(self):
+        # 'x' only splits as a standalone word, not inside "Max" / "Foxygen"
+        assert primary_artist("Max Cooper") == "Max Cooper"
+        assert primary_artist("Foxygen") == "Foxygen"
+
+    def test_whitespace_stripped(self):
+        assert primary_artist("  MC A , MC B ") == "MC A"
 
     def test_different_artists_differ(self):
         id1 = make_track_id("Burial", "Archangel")

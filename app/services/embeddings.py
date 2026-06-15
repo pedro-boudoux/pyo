@@ -67,6 +67,28 @@ def canonical_title(track: str) -> str:
     return t
 
 
+# Separators in a multi-artist credit string, in order of how a track is usually
+# credited: "MC A, MC B, DJ C", "X feat. Y", "A & B", "A x B", "A vs B". Used only
+# to recover a *primary* artist when the full credit doesn't resolve on Last.fm.
+_ARTIST_SPLIT = re.compile(
+    r"\s*(?:,|&|/| x |\bfeat\.?\b|\bft\.?\b|\bfeaturing\b|\bvs\.?\b|\bwith\b)\s*",
+    re.IGNORECASE,
+)
+
+
+def primary_artist(artist: str) -> str:
+    """
+    The first credited artist from a multi-artist string. Last.fm doesn't resolve
+    combined credits like "GORDÃO DO PC, Mc Ag, Dj Wesley" (common in baile funk),
+    returning no tags and so a zero embedding — but the primary artist resolves.
+    Returns the original string unchanged when there's no separator. Identity keys
+    (make_track_id / make_canonical_key) still use the full credit; this only feeds
+    a tag-lookup fallback in the embedding pipeline.
+    """
+    primary = _ARTIST_SPLIT.split(artist.strip(), maxsplit=1)[0].strip()
+    return primary or artist.strip()
+
+
 def make_canonical_key(artist: str, track: str) -> str:
     """
     Identity that folds cosmetic variants of one recording together. Mirrors

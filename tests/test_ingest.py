@@ -331,3 +331,80 @@ class TestEmbedAndStoreTrackCacheMiss:
         assert result is not None
         assert result["track_id"] == tid
         assert result["embedding"] == fake_vec
+
+
+# ---------------------------------------------------------------------------
+# Multi-artist credit fallback: a credit string Last.fm can't resolve falls back
+# to the primary (first) artist for tags.
+# ---------------------------------------------------------------------------
+
+class TestMultiArtistFallback:
+    def _patch_lastfm_by_artist(self, monkeypatch, primary):
+        """artist-level fetches return tags ONLY for the primary artist; the full
+        mashed credit resolves to nothing (mirrors real Last.fm behavior)."""
+        def artist_tags(a):
+            return {"baile funk": 100, "funk": 40} if a == primary else {}
+
+        def similar_artists(a):
+            # the full mashed credit DOES return similar artists (other unresolvable
+            # mashed strings) — so similar-artists must NOT gate the fallback
+            if a == primary:
+                return [{"artist": "DJ X", "match": 0.9}]
+            return [{"artist": "Other Mashed, Credit String", "match": 1.0}]
+
+        monkeypatch.setattr("app.services.ingest.lastfm.get_track_info",
+                            MagicMock(return_value={"listeners": 238, "playcount": 1, "tags": []}))
+        monkeypatch.setattr("app.services.ingest.lastfm.get_track_top_tags",
+                            MagicMock(return_value={}))  # never resolves for this track
+        monkeypatch.setattr("app.services.ingest.lastfm.get_artist_top_tags",
+                            MagicMock(side_effect=artist_tags))
+        monkeypatch.setattr("app.services.ingest.lastfm.get_similar_artists",
+                            MagicMock(side_effect=similar_artists))
+        monkeypatch.setattr("app.services.ingest.lastfm.blend_tags",
+                            MagicMock(return_value={"baile funk": 100, "funk": 40}))
+        monkeypatch.setattr("app.services.ingest.embeddings.build_tag_vector",
+                            MagicMock(return_value=make_vector(0.5)))
+        monkeypatch.setattr("app.services.ingest.get_cover_url", MagicMock(return_value=None))
+
+    def test_falls_back_to_primary_artist(self, monkeypatch):
+        full = "GORDÃO DO PC, Mc Ag, Dj Wesley"
+        primary = "GORDÃO DO PC"
+        name = "Vou Morar no Cabaré"
+        monkeypatch.setattr(
+            "app.services.ingest.get_cursor",
+            _make_two_step_cursor(first_rows=[], second_rows=[]),
+        )
+        self._patch_lastfm_by_artist(monkeypatch, primary)
+
+        import app.services.ingest as ingest_mod
+        from app.services.ingest import embed_and_store_track
+        result = embed_and_store_track(full, name)
+
+        # tags were recovered via the primary artist → real (non-empty) blend
+        assert result is not None
+        assert result["tags"] == {"baile funk": 100, "funk": 40}
+        # the fallback re-queried with the primary artist
+        ingest_mod.lastfm.get_artist_top_tags.assert_any_call(primary)
+        ingest_mod.lastfm.get_similar_artists.assert_any_call(primary)
+
+    def test_no_fallback_when_full_credit_resolves(self, monkeypatch):
+        """A legit band whose full name resolves never triggers the split."""
+        band = "Earth, Wind & Fire"
+        name = "September"
+        monkeypatch.setattr(
+            "app.services.ingest.get_cursor",
+            _make_two_step_cursor(first_rows=[], second_rows=[]),
+        )
+        # full name resolves to tags → fallback condition is False
+        self._patch_lastfm_by_artist(monkeypatch, band)
+
+        import app.services.ingest as ingest_mod
+        from app.services.ingest import embed_and_store_track
+        from app.services.embeddings import primary_artist
+        embed_and_store_track(band, name)
+
+        # the fallback never fired: the (wrong) split primary "Earth" was never queried
+        wrong_primary = primary_artist(band)  # "Earth"
+        assert wrong_primary != band
+        called = [c.args[0] for c in ingest_mod.lastfm.get_artist_top_tags.call_args_list]
+        assert wrong_primary not in called
