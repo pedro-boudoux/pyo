@@ -42,6 +42,19 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
     artist_tags = lastfm.get_artist_top_tags(artist)
     track_tags = lastfm.get_track_top_tags(artist, name)
     similar_artists = lastfm.get_similar_artists(artist)
+
+    # Multi-artist credit strings ("MC A, MC B, DJ C" — rampant in baile funk) don't
+    # resolve on Last.fm: no track/artist tags, no similar artists, so the track gets
+    # a zero embedding and zero recommendations. Fall back to the primary (first)
+    # credited artist, which does resolve. Only fires when the full credit is dry, so
+    # legitimate comma/&-containing band names (which DO resolve) are never touched.
+    # Identity (track_id / canonical_key) still keys the full credit — no FK churn.
+    primary = embeddings.primary_artist(artist)
+    if primary != artist and not artist_tags and not track_tags and not similar_artists:
+        artist_tags = lastfm.get_artist_top_tags(primary)
+        track_tags = lastfm.get_track_top_tags(primary, name)
+        similar_artists = lastfm.get_similar_artists(primary)
+
     similar_tags = [(lastfm.get_artist_top_tags(a["artist"]), a["match"]) for a in similar_artists]
     tag_counts = lastfm.blend_tags(artist_tags, track_tags, similar_tags)
     # build_tag_vector encodes + caches each tag's MiniLM vector in tag_vocab, so the
