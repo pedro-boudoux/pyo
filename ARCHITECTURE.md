@@ -3,11 +3,18 @@
 Visual reference for how the Underground Music Discovery backend actually works
 (grounded in the code under `app/`, not just the original plan).
 
-> **Heads up — the code has drifted from `CLAUDE.md`:**
-> - **Spotify is not used.** Song search merges the local DB + Last.fm `track.search`.
+> **Heads up — a few things to know up front:**
+> - **Spotify plays no part in search, embeddings, or recommendations.** Its one
+>   narrow role is resolving a public "listen on Spotify" link
+>   (`services/spotify.py`, client-credentials flow) via `GET /songs/{id}/spotify`
+>   — optional, and the result is cached on the `songs` row.
 > - **IDs are `track_id`**, a 20-char SHA1 of `"{artist}|||{track}"` (see `embeddings.make_track_id`), not `spotify_id`.
+> - A second, looser **`canonical_key`** folds cosmetic variants (clean/explicit/
+>   remastered/…) of the same recording so duplicates don't flood recs (issue #11, diagram 3a).
 > - **Album covers** come from Deezer → iTunes → Deezer artist photo (`services/covers.py`).
-> - Extra machinery exists beyond the plan: **blended tags**, **MMR re-ranking**, **reject steering**, **linear & tree playlists**, and **recursive seed expansion**.
+> - Extra machinery beyond the original plan: **blended tags**, **MMR re-ranking**,
+>   **reject steering**, **linear & tree playlists**, **recursive seed expansion**,
+>   and **dominant-tag aggregation** (`POST /graph/tags`, issue #2).
 
 ## Two shared building blocks
 
@@ -47,6 +54,7 @@ graph TB
         S_steer["steering.py"]
         S_ingest["ingest.py"]
         S_covers["covers.py"]
+        S_spotify["spotify.py"]
     end
 
     subgraph data["Postgres + pgvector"]
@@ -61,11 +69,12 @@ graph TB
         E_lastfm["Last.fm API"]
         E_deezer["Deezer"]
         E_itunes["iTunes"]
+        E_spotify["Spotify API<br/>(link resolution only)"]
     end
 
     UI --> R_songs & R_graph & R_recs & R_fb & R_pl
 
-    R_songs --> S_lastfm & S_emb & S_covers
+    R_songs --> S_lastfm & S_emb & S_covers & S_spotify
     R_graph --> S_lastfm & S_emb & S_ingest
     R_recs --> S_steer & S_ingest & S_emb & S_lastfm
     R_fb --> S_steer
@@ -73,6 +82,7 @@ graph TB
 
     S_lastfm --> E_lastfm
     S_covers --> E_deezer & E_itunes
+    S_spotify --> E_spotify
     S_ingest --> S_lastfm & S_emb & S_covers
 
     svc --> data
@@ -93,6 +103,9 @@ erDiagram
         int listeners "underground filter"
         vector embedding "vector(300)"
         text image "cover URL"
+        text canonical_key "sha1(artist|||canonical_title): folds variants, indexed (issue #11)"
+        text spotify_url "cached open.spotify.com link (NULL = none)"
+        timestamptz spotify_checked_at "when resolved (NULL = never)"
     }
     tag_vocab {
         serial id PK "= vector dimension index"
@@ -154,6 +167,37 @@ flowchart TD
 
 ---
 
+## 3a. Canonical key — folding cosmetic variants (issue #11)
+
+`track_id` keys the *exact* title, so "Song", "Song (Clean)" and "Song -
+Remastered 2011" get different ids and slip past track_id dedupe — yet their tags
+(and vectors) are near-identical, so the duplicate ranks at the top of recs. A
+second, looser identity collapses them: `canonical_key = sha1(artist|||canonical_title(track))`
+(`embeddings.canonical_title` / `make_canonical_key`). It's stored on `songs`
+(indexed, nullable → "no folding"), backfilled by `POST /songs/backfill-canonical`,
+and used to dedupe at the search merge, the recommendation pool/exclusion/top-up,
+and the seed bootstrap pool. `track_id` stays the FK/cache key.
+
+```mermaid
+flowchart TD
+    in(["raw track title"]) --> low["lowercase + strip"]
+    low --> kind{"qualifier in (…)/after -?"}
+
+    kind -->|cosmetic<br/>clean·explicit·dirty·remastered[ YYYY]·<br/>single/album version·radio edit·mono/stereo·<br/>bonus track·trailing feat.| strip["STRIP it<br/>→ folds into base recording"]
+    kind -->|variant<br/>live·acoustic·remix·demo·instrumental| keepgen{"generic marker?"}
+    kind -->|none / numbered<br/>(Untitled 02)| asis["leave title as-is"]
+
+    keepgen -->|generic<br/>'(Live)', '- live', '(Live Version)'| normtok["normalize to '(marker)' token<br/>→ spellings merge, stays distinct from studio cut"]
+    keepgen -->|named/specific<br/>'(Tiësto Remix)', '(Live at Wembley)'| keepfull["keep full title<br/>→ stays distinct"]
+
+    strip --> key
+    normtok --> key
+    keepfull --> key
+    asis --> key["sha1(artist|||canonical_title)<br/>= canonical_key"]
+```
+
+---
+
 ## 4. Song search (`GET /songs/search`)
 
 ```mermaid
@@ -209,6 +253,27 @@ flowchart TD
     fallback --> rank["merge ANN + getSimilar + expansion<br/>sort by similarity, keep top k"]
     rank --> edges[("INSERT graph_edges<br/>seed → each candidate")]
     edges --> done(["{track_id, name, artist}"])
+```
+
+---
+
+## 5a. Dominant tags across a graph (`POST /graph/tags`, issue #2)
+
+"Which genres are taking over." Sums each song's *normalized* tag weights (read
+straight from the stored embeddings) across a node set and returns the top
+`top_n` as `{ tag, weight, count, share }` (`embeddings.dominant_tags`). Pass
+`track_ids` to scope to exactly what the UI is showing; omit it to aggregate the
+whole persisted graph.
+
+```mermaid
+flowchart TD
+    req(["POST /graph/tags {track_ids?, top_n}"]) --> scope{"track_ids given?"}
+    scope -->|yes| sel1["SELECT embedding WHERE track_id = ANY(...)<br/>AND embedding IS NOT NULL"]
+    scope -->|no| sel2["SELECT embedding for every song that is a<br/>graph_node OR an edge endpoint<br/>(nodes ∪ source ∪ target)"]
+    sel1 --> vocab["load tag_vocab (id → tag)"]
+    sel2 --> vocab
+    vocab --> agg["dominant_tags():<br/>sum normalized weight per vocab slot,<br/>map slot → tag, sort desc, take top_n"]
+    agg --> out(["{tag, weight, count, share}[]<br/>(empty set / no embeddings → [])"])
 ```
 
 ---
@@ -332,8 +397,35 @@ sequenceDiagram
         API->>DB: store negative (steers future recs)
     end
 
+    Note over FE,API: as nodes appear, FE prefetches<br/>GET /songs/{id}/spotify (link)<br/>and may poll GET /songs/{id}/status
+
     U->>FE: build playlist
     FE->>API: POST /playlists/tree
     API->>DB: BFS over neighborhood
     API-->>FE: ordered playlist
 ```
+
+---
+
+## 10. Spotify "listen on" link (`GET /songs/{track_id}/spotify`)
+
+The only place Spotify is touched. Resolves a public `open.spotify.com` URL via
+the client-credentials search (`services/spotify.py`) and **persists it on the
+`songs` row** so later calls are free. A non-definitive result (creds unset /
+network error → `checked=false`) is *not* stored, so it's retried next time.
+
+```mermaid
+flowchart TD
+    req(["GET /songs/{id}/spotify"]) --> row{"song in DB?"}
+    row -->|no| e404["404"]
+    row -->|yes| cached{"spotify_checked_at set?"}
+    cached -->|yes| serve["return stored<br/>{url, checked: true}"]
+    cached -->|no| resolve["spotify.find_track_url<br/>(cached client-credentials token)"]
+    resolve -->|SpotifyUnavailable| nodef["return {url: null, checked: false}<br/>NOT persisted → retried later"]
+    resolve -->|url or definitive null| persist[("UPDATE songs<br/>spotify_url, spotify_checked_at = now()")]
+    persist --> serve2["return {url, checked: true}"]
+```
+
+> `GET /songs/{id}/status` is a sibling lightweight check — `{ exists, cached }`
+> where `cached` means an embedding is already stored — used by the frontend to
+> warn about slow "cold" seeds.

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 from app.models import RecommendationsResponse, Recommendation
 from app.db import get_cursor
-from app.services import steering, lastfm, ingest, embeddings
+from app.services import steering, lastfm, ingest, embeddings, colisten
 from app.services.embeddings import mmr_rerank
 from app.config import DEFAULT_K, MMR_LAMBDA, MMR_POOL_MULTIPLIER, MMR_MAX_PER_ARTIST
 
@@ -67,14 +67,18 @@ def topup_from_lastfm(seed_track_id: str, query_embedding: list, exclude_ids: se
                 continue
 
     # primary: the seed's own similar tracks
-    absorb(lastfm.get_similar_tracks(seed["artist"], seed["name"], limit=TOPUP_SIMILAR_LIMIT))
+    seed_similar = lastfm.get_similar_tracks(seed["artist"], seed["name"], limit=TOPUP_SIMILAR_LIMIT)
+    colisten.record_edges(seed["artist"], seed["name"], seed_similar, source="track_similar")
+    absorb(seed_similar)
 
     # cold-start fallback: similar artists' top tracks (same blind spot as seeding)
     if len(added) < needed:
         for sa in lastfm.get_similar_artists(seed["artist"]):
             if len(added) >= needed:
                 break
-            absorb(lastfm.get_artist_top_tracks(sa["artist"], limit=TOPUP_ARTIST_TOPTRACKS_LIMIT))
+            sa_tracks = lastfm.get_artist_top_tracks(sa["artist"], limit=TOPUP_ARTIST_TOPTRACKS_LIMIT)
+            colisten.record_edges(seed["artist"], seed["name"], sa_tracks, source="artist_similar", weight=sa["match"])
+            absorb(sa_tracks)
 
     return added
 

@@ -2,7 +2,8 @@ import hashlib
 import re
 import numpy as np
 from app.db import get_cursor
-from app.config import EMBEDDING_DIM, DEFAULT_K
+from app.config import EMBEDDING_DIM, TAG_EMBEDDING_DIM, DEFAULT_K
+from app.services import tag_encoder
 
 
 def make_track_id(artist: str, track: str) -> str:
@@ -107,29 +108,48 @@ def get_or_create_tag_ids(tags: list[str]) -> dict[str, int]:
     return tag_ids
 
 
-"""
-    takes the {tag : count} dict from get_artist_top_tags, looks up each tag's position in the vocab, normalizes counts to 0-1 and places them into a fixed-size float array of length EMBEDDING_DIM. 
+def build_tag_vector(tag_counts: dict[str, float]) -> list[float]:
+    """
+    Build a track's dense semantic embedding from its blended {tag: count} dict
+    (algorithm 2.0, Phase 1). Each tag is encoded to a 384-dim MiniLM vector
+    (cached per unique tag in tag_vocab.embedding), and the track vector is the
+    count-weighted average of those tag vectors, then L2-normalized.
 
-    tags not in the vocab yet are ignored (they need get_or_create_tag_ids called first)
-
-    this vector is what gets stored in pgvector and queried for ANN search
-"""
-def build_tag_vector(tag_counts: dict[str, int]) -> list[float]:
+    Weighting by count means a track's dominant tags pull its vector hardest, the
+    same intent as the old normalized-slot model — but tags now live in a shared
+    semantic space, so "hip hop" and "rap" land near each other instead of in
+    unrelated slots. Returns a zero vector (length TAG_EMBEDDING_DIM) when there
+    are no tags or none could be encoded; the all-zero guard downstream treats that
+    as "no usable tags".
+    """
     if not tag_counts:
-        return [0.0] * EMBEDDING_DIM
+        return [0.0] * TAG_EMBEDDING_DIM
 
-    with get_cursor() as cursor:
-        cursor.execute("SELECT id, tag FROM tag_vocab")
-        vocab = {row["tag"]: row["id"] for row in cursor.fetchall()}
+    emb_map = tag_encoder.get_tag_embeddings(list(tag_counts.keys()))
+    if not emb_map:
+        return [0.0] * TAG_EMBEDDING_DIM
 
-    max_count = max(tag_counts.values()) if tag_counts else 1
-
-    vector = [0.0] * EMBEDDING_DIM
+    # Infer the dimension from the encoder output rather than assuming it, so the
+    # vector matches whatever model tag_encoder is configured with.
+    dim = len(next(iter(emb_map.values())))
+    acc = np.zeros(dim, dtype=float)
+    total_weight = 0.0
     for tag, count in tag_counts.items():
-        if tag in vocab and vocab[tag] < EMBEDDING_DIM:
-            vector[vocab[tag]] = count / max_count
+        vec = emb_map.get(tag)
+        if vec is None:
+            continue
+        weight = float(count)
+        acc += weight * vec
+        total_weight += weight
 
-    return vector
+    if total_weight == 0:
+        return [0.0] * TAG_EMBEDDING_DIM
+
+    norm = np.linalg.norm(acc)
+    if norm == 0:
+        return [0.0] * TAG_EMBEDDING_DIM
+
+    return (acc / norm).tolist()
 
 
 def ann_search(
@@ -210,39 +230,39 @@ def cosine_similarity(a: list, b: list) -> float:
     return float(dot / (norm_a * norm_b))
 
 
-def dominant_tags(vectors: list[list], id_to_tag: dict[int, str], top_n: int = 15) -> list[dict]:
+def dominant_tags(tag_dicts: list[dict], top_n: int = 15) -> list[dict]:
     """
-    Aggregate the dominant tags across a set of song embeddings (e.g. every node
-    in a graph) so the UI can show which genres are taking over.
+    Aggregate the dominant tags across a set of songs (e.g. every node in a graph)
+    so the UI can show which genres are taking over.
 
-    Each embedding slot `i` corresponds to tag_vocab id `i` (build_tag_vector
-    writes a tag's normalized 0..1 weight into slot == its vocab id). We sum those
-    weights per slot across all vectors; the result is the tag's total presence in
-    the graph. `count` is how many songs carry the tag, and `share` is the tag's
-    fraction of the summed weight (a rough "% of the vibe"). Returns the top `top_n`
-    by weight, descending.
+    Reads each song's raw blended {tag: count} dict (stored in songs.tags). The
+    dense averaged embedding can't be inverted back to discrete tags, so this works
+    from the persisted tag dicts instead of embedding slots. We sum each tag's
+    count across all songs (its total presence in the graph); `count` is how many
+    songs carry the tag, and `share` is the tag's fraction of the summed weight (a
+    rough "% of the vibe"). Returns the top `top_n` by weight, descending.
     """
-    if not vectors:
+    if not tag_dicts:
         return []
 
-    weight: dict[int, float] = {}
-    count: dict[int, int] = {}
-    for vec in vectors:
-        for i, x in enumerate(vec):
-            if x > 0:
-                weight[i] = weight.get(i, 0.0) + x
-                count[i] = count.get(i, 0) + 1
+    weight: dict[str, float] = {}
+    count: dict[str, int] = {}
+    for tags in tag_dicts:
+        if not tags:
+            continue
+        for tag, c in tags.items():
+            weight[tag] = weight.get(tag, 0.0) + float(c)
+            count[tag] = count.get(tag, 0) + 1
 
     total = sum(weight.values()) or 1.0
     rows = [
         {
-            "tag": id_to_tag[i],
+            "tag": tag,
             "weight": round(w, 4),
-            "count": count[i],
+            "count": count[tag],
             "share": round(w / total, 4),
         }
-        for i, w in weight.items()
-        if i in id_to_tag
+        for tag, w in weight.items()
     ]
     rows.sort(key=lambda r: r["weight"], reverse=True)
     return rows[:top_n]

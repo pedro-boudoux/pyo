@@ -1,0 +1,11 @@
+{
+  "model": "current",
+  "k": 10,
+  "read_only": true,
+  "seeds_scored": 294,
+  "seeds_total": 294,
+  "recall_at_10": 0.1823,
+  "mrr": 0.4249,
+  "intra_list_distance": 0.0928,
+  "median_listeners": 235015.8146
+}

@@ -2,7 +2,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 from pgvector.psycopg2 import register_vector
-from app.config import DATABASE_URL, EMBEDDING_DIM
+from app.config import DATABASE_URL, EMBEDDING_DIM, TAG_EMBEDDING_DIM, LEGACY_EMBEDDING_DIM
 
 
 def get_connection():
@@ -35,6 +35,59 @@ def _try(sql):
         pass
 
 
+def _column_type(table: str, column: str) -> str | None:
+    """Return the formatted type of a column (e.g. 'vector(300)'), or None if the
+    column doesn't exist. Whitespace is stripped so callers can compare to
+    'vector(384)' without worrying about pg_catalog's spacing."""
+    try:
+        with get_cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT format_type(a.atttypid, a.atttypmod) AS coltype
+                FROM pg_attribute a
+                JOIN pg_class c ON c.oid = a.attrelid
+                WHERE c.relname = %s AND a.attname = %s
+                  AND a.attnum > 0 AND NOT a.attisdropped
+                """,
+                (table, column),
+            )
+            row = cursor.fetchone()
+    except Exception:
+        return None
+    if not row or not row["coltype"]:
+        return None
+    return row["coltype"].replace(" ", "")
+
+
+def _migrate_embedding_to_384():
+    """Algorithm 2.0, Phase 1: move songs.embedding from the sparse vector(300) to
+    the dense vector(384) semantic tag vector, keeping the old column as
+    embedding_legacy_300 for rollback. Idempotent and resumable:
+
+      - already vector(384)           → no-op.
+      - legacy vector(300), no legacy → drop the stale HNSW index, rename the old
+        column aside, add the new 384 column (NULL until backfill).
+      - partial (renamed but new col   → just (re)add the 384 column.
+        missing)
+    """
+    legacy_col = f"embedding_legacy_{LEGACY_EMBEDDING_DIM}"
+    coltype = _column_type("songs", "embedding")
+    new_type = f"vector({EMBEDDING_DIM})"
+
+    if coltype == new_type:
+        return  # already migrated
+
+    if coltype == f"vector({LEGACY_EMBEDDING_DIM})" and _column_type("songs", legacy_col) is None:
+        # The HNSW index would otherwise follow the renamed column; drop it here and
+        # let the recreate at the bottom of init_db rebuild it on the new 384 column.
+        _try("DROP INDEX IF EXISTS idx_songs_embedding")
+        _try(f"ALTER TABLE songs RENAME COLUMN embedding TO {legacy_col}")
+
+    # Add the new dense column (no-op if it already exists). NULL for every row
+    # until the backfill (/songs/reembed) repopulates it through the new pipeline.
+    _try(f"ALTER TABLE songs ADD COLUMN IF NOT EXISTS embedding vector({EMBEDDING_DIM})")
+
+
 def init_db():
     with get_cursor() as cursor:
         cursor.execute("CREATE EXTENSION IF NOT EXISTS vector")
@@ -48,16 +101,18 @@ def init_db():
                 listeners  INTEGER,
                 image      TEXT,
                 embedding  vector({EMBEDDING_DIM}),
+                tags       jsonb,
                 spotify_url        TEXT,
                 spotify_checked_at TIMESTAMPTZ,
                 created_at TIMESTAMPTZ DEFAULT now()
             )
         """)
 
-        cursor.execute("""
+        cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS tag_vocab (
-                id  SERIAL PRIMARY KEY,
-                tag TEXT UNIQUE NOT NULL
+                id        SERIAL PRIMARY KEY,
+                tag       TEXT UNIQUE NOT NULL,
+                embedding vector({TAG_EMBEDDING_DIM})
             )
         """)
 
@@ -89,6 +144,24 @@ def init_db():
             )
         """)
 
+        # Co-listening graph (algorithm 2.0, Stage B data collection — issue: hybrid
+        # embedding refactor). Append-only weighted edges harvested from Last.fm
+        # getSimilar at every call site. Deliberately NO foreign key to songs:
+        # getSimilar targets usually aren't embedded yet, and we still want their
+        # edges so the graph densifies ahead of node2vec training. source marks
+        # provenance: 'track_similar' (track.getSimilar) or 'artist_similar'
+        # (artist.getSimilar → top tracks, weighted by the artist match).
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS colisten_edges (
+                id              SERIAL PRIMARY KEY,
+                source_track_id TEXT NOT NULL,
+                target_track_id TEXT NOT NULL,
+                weight          FLOAT,
+                source          TEXT,
+                created_at      TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
     # Migrations — each runs in its own transaction so one failure doesn't block the rest
     _try("ALTER TABLE songs RENAME COLUMN spotify_id TO track_id")
     _try("ALTER TABLE graph_nodes RENAME COLUMN spotify_id TO track_id")
@@ -104,12 +177,30 @@ def init_db():
     # today (no folding). Backfill existing rows via POST /songs/backfill-canonical.
     _try("ALTER TABLE songs ADD COLUMN IF NOT EXISTS canonical_key TEXT")
 
+    # Algorithm 2.0, Phase 1: dense semantic tag embeddings.
+    #   - songs.embedding goes from sparse vector(300) to dense vector(384). The old
+    #     column is preserved as embedding_legacy_300 for rollback (dropped only after
+    #     Phase 1 sign-off).
+    #   - songs.tags (jsonb) stores the raw blended {tag: count} dict: a dense averaged
+    #     vector can't be inverted to discrete tags, so dominant_tags / /features read
+    #     this instead of embedding slots.
+    #   - tag_vocab.embedding caches each tag's MiniLM vector (encode once, reuse).
+    _migrate_embedding_to_384()
+    _try("ALTER TABLE songs ADD COLUMN IF NOT EXISTS tags jsonb")
+    _try(f"ALTER TABLE tag_vocab ADD COLUMN IF NOT EXISTS embedding vector({TAG_EMBEDDING_DIM})")
+
     # Ensure unique constraints and indexes exist regardless of how the table was created
     _try("CREATE UNIQUE INDEX IF NOT EXISTS songs_track_id_unique ON songs(track_id)")
     _try("CREATE UNIQUE INDEX IF NOT EXISTS graph_nodes_track_id_unique ON graph_nodes(track_id)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_embedding ON songs USING hnsw (embedding vector_cosine_ops)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_canonical_key ON songs(canonical_key)")
     _try("CREATE UNIQUE INDEX IF NOT EXISTS idx_graph_edges_source_target ON graph_edges(source_id, target_id)")
+
+    # Co-listening edges: unique per (source, target, provenance) so recording the
+    # same getSimilar result twice just refreshes the weight (idempotent append).
+    # Lookup index on source for the graph crawl / node2vec walk generation.
+    _try("CREATE UNIQUE INDEX IF NOT EXISTS idx_colisten_edges_unique ON colisten_edges(source_track_id, target_track_id, source)")
+    _try("CREATE INDEX IF NOT EXISTS idx_colisten_edges_source ON colisten_edges(source_track_id)")
 
     # Trigram indexes for fast substring search on the songs cache.
     # Silently skipped if pg_trgm isn't available on the host.

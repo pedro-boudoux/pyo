@@ -1,3 +1,5 @@
+from psycopg2.extras import Json
+
 from app.db import get_cursor
 from app.services import lastfm, embeddings
 from app.services.covers import get_cover_url
@@ -19,7 +21,7 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
 
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT track_id, name, artist, listeners, image, embedding FROM songs WHERE track_id = %s",
+            "SELECT track_id, name, artist, listeners, image, embedding, tags FROM songs WHERE track_id = %s",
             (track_id,),
         )
         row = cursor.fetchone()
@@ -32,6 +34,7 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
             "listeners": row["listeners"],
             "image": row["image"],
             "embedding": [float(x) for x in row["embedding"]],
+            "tags": row["tags"] or {},
         }
 
     info = lastfm.get_track_info(artist, name)
@@ -41,20 +44,24 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
     similar_artists = lastfm.get_similar_artists(artist)
     similar_tags = [(lastfm.get_artist_top_tags(a["artist"]), a["match"]) for a in similar_artists]
     tag_counts = lastfm.blend_tags(artist_tags, track_tags, similar_tags)
-    embeddings.get_or_create_tag_ids(list(tag_counts.keys()))
+    # build_tag_vector encodes + caches each tag's MiniLM vector in tag_vocab, so the
+    # old get_or_create_tag_ids slot-allocation step is no longer needed. We persist
+    # the raw {tag: count} dict in songs.tags because a dense averaged vector can't be
+    # inverted back to discrete tags (dominant_tags / /features read it from there).
     vector = embeddings.build_tag_vector(tag_counts)
     image = get_cover_url(artist, name)
 
     with get_cursor() as cursor:
         cursor.execute("""
-            INSERT INTO songs (track_id, name, artist, listeners, embedding, image, canonical_key)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO songs (track_id, name, artist, listeners, embedding, image, canonical_key, tags)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (track_id) DO UPDATE SET
                 listeners = EXCLUDED.listeners,
                 embedding = EXCLUDED.embedding,
                 image = COALESCE(EXCLUDED.image, songs.image),
-                canonical_key = EXCLUDED.canonical_key
-        """, (track_id, name, artist, info["listeners"], vector, image, canonical_key))
+                canonical_key = EXCLUDED.canonical_key,
+                tags = EXCLUDED.tags
+        """, (track_id, name, artist, info["listeners"], vector, image, canonical_key, Json(tag_counts)))
 
     return {
         "track_id": track_id,
@@ -63,4 +70,5 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
         "listeners": info["listeners"],
         "image": image,
         "embedding": vector,
+        "tags": tag_counts,
     }

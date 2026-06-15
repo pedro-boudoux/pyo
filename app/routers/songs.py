@@ -4,7 +4,6 @@ from app.models import SongSearchResult, TrackFeatures
 from app.services import lastfm, ingest, embeddings as emb_service, spotify
 from app.services.covers import get_cover_url, is_broken_image
 from app.db import get_cursor
-from app.config import EMBEDDING_DIM
 
 router = APIRouter(prefix="/songs", tags=["songs"])
 
@@ -396,7 +395,7 @@ def get_song_spotify_link(track_id: str):
 def get_song_features(track_id: str):
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT name, artist, listeners, embedding FROM songs WHERE track_id = %s",
+            "SELECT name, artist, listeners, embedding, tags FROM songs WHERE track_id = %s",
             (track_id,)
         )
         row = cursor.fetchone()
@@ -409,6 +408,7 @@ def get_song_features(track_id: str):
         name, artist = row["name"], row["artist"]
         listeners = row["listeners"] or 0
         embedding = [float(x) for x in row["embedding"]]
+        tag_counts = row["tags"] or {}
     else:
         # cache miss — run the shared embedding pipeline. An unbounded cap means
         # features works for any track regardless of popularity.
@@ -418,15 +418,12 @@ def get_song_features(track_id: str):
         name, artist = song["name"], song["artist"]
         listeners = song["listeners"] or 0
         embedding = song["embedding"]
+        tag_counts = song.get("tags") or {}
 
-    # derive the track's tags from its embedding: any vocab tag whose slot is
-    # non-zero. Same derivation for hot and cold paths, so they agree.
-    with get_cursor() as cursor:
-        cursor.execute("SELECT id, tag FROM tag_vocab WHERE id < %s", (EMBEDDING_DIM,))
-        tags = [
-            r["tag"] for r in cursor.fetchall()
-            if r["id"] < len(embedding) and embedding[r["id"]] > 0
-        ]
+    # The track's tags are the raw blended {tag: count} dict persisted in
+    # songs.tags — a dense averaged embedding can't be inverted to discrete tags.
+    # Surface them most-applied first.
+    tags = [t for t, _ in sorted(tag_counts.items(), key=lambda kv: kv[1], reverse=True)]
 
     return TrackFeatures(
         track_id=track_id,
