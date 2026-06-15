@@ -1,0 +1,11 @@
+{
+  "model": "stage_a",
+  "k": 10,
+  "read_only": true,
+  "seeds_scored": 294,
+  "seeds_total": 294,
+  "recall_at_10": 0.2276,
+  "mrr": 0.4545,
+  "intra_list_distance": 0.0443,
+  "median_listeners": 220005.7993
+}
