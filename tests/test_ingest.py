@@ -346,7 +346,11 @@ class TestMultiArtistFallback:
             return {"baile funk": 100, "funk": 40} if a == primary else {}
 
         def similar_artists(a):
-            return [{"artist": "DJ X", "match": 0.9}] if a == primary else []
+            # the full mashed credit DOES return similar artists (other unresolvable
+            # mashed strings) — so similar-artists must NOT gate the fallback
+            if a == primary:
+                return [{"artist": "DJ X", "match": 0.9}]
+            return [{"artist": "Other Mashed, Credit String", "match": 1.0}]
 
         monkeypatch.setattr("app.services.ingest.lastfm.get_track_info",
                             MagicMock(return_value={"listeners": 238, "playcount": 1, "tags": []}))
