@@ -30,11 +30,15 @@ type SpotifyState =
 
 type Props = {
   nodeLabel: string;
+  /** The node's artist — used by the "Block artist" action. */
+  artist?: string;
   trackId: string;
   isSeed: boolean;
   loading: boolean;
   onExpand: (params: ExpansionParams) => void;
   onDelete: () => void;
+  /** Block this artist everywhere (recommendations + pull from graph). */
+  onBlockArtist?: () => void;
   onClose: () => void;
   initial?: ExpansionParams;
   /** Render as a full-width bottom sheet (mobile) instead of a floating card. */
@@ -46,11 +50,13 @@ type Props = {
 
 export function NodePopover({
   nodeLabel,
+  artist,
   trackId,
   isSeed,
   loading,
   onExpand,
   onDelete,
+  onBlockArtist,
   onClose,
   initial,
   mobile = false,
@@ -59,6 +65,7 @@ export function NodePopover({
 }: Props) {
   const [params, setParams] = useState<ExpansionParams>(initial ?? DEFAULT_EXPANSION);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirmingBlock, setConfirmingBlock] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
   // ── Desktop: drag the card by its header to reposition it anywhere ──
@@ -402,6 +409,35 @@ export function NodePopover({
               {isSeed
                 ? "Removes this seed and everything branching from it."
                 : "Also removes any songs left disconnected from a seed."}
+            </div>
+          )}
+
+          {onBlockArtist && artist && (
+            <div className="mt-2">
+              <button
+                disabled={loading}
+                onClick={() => {
+                  if (confirmingBlock) {
+                    setLeaving(true);
+                    setTimeout(onBlockArtist, EXIT_MS);
+                  } else setConfirmingBlock(true);
+                }}
+                className={[
+                  "w-full rounded-xl py-2 text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed",
+                  confirmingBlock
+                    ? "bg-[#3a3a3a] text-white hover:bg-black"
+                    : "border border-[#d0d0d0] text-[#6a6a6a] hover:bg-[#f0f0f0] hover:border-[#a0a0a0]",
+                ].join(" ")}
+              >
+                <span className="block truncate px-2">
+                  {confirmingBlock ? `Click again to block ${artist}` : `Block ${artist}`}
+                </span>
+              </button>
+              {confirmingBlock && (
+                <div className="text-[10px] text-[#8a8a8a] mt-1.5 text-center leading-snug">
+                  Removes every song by {artist} and stops recommending them. Unblock in Graph Info.
+                </div>
+              )}
             </div>
           )}
         </div>

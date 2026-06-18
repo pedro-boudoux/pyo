@@ -54,9 +54,11 @@ export function getRecommendations(
   k: number,
   lambdaParam: number,
   excludeIds: string[],
+  excludeArtists: string[] = [],
 ) {
   const params = new URLSearchParams({ k: String(k), lambda: String(lambdaParam) });
   for (const id of excludeIds) params.append("exclude", id);
+  for (const a of excludeArtists) params.append("exclude_artists", a);
   return request<{ recommendations: Recommendation[] }>(
     `/recommendations/${track_id}?${params}`,
   );
@@ -115,6 +117,7 @@ export async function expandFromTrack(
     niche: boolean;
     maxDepth: number;
     excludeIds: string[];
+    excludeArtists?: string[];
   },
 ): Promise<ExpandedTrack[]> {
   if (method === "recommendations") {
@@ -123,6 +126,7 @@ export async function expandFromTrack(
       opts.k,
       opts.lambda,
       opts.excludeIds,
+      opts.excludeArtists ?? [],
     );
     return data.recommendations;
   }

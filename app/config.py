@@ -12,6 +12,19 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
+
+def _parse_csv(raw: str) -> list[str]:
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+# Mandatory artist blacklist, managed from the deployment. Comma-separated artist
+# names in BLACKLIST_ARTISTS are never recommended (they can still be searched and
+# used as a seed directly). Matching is case-insensitive and credit-aware (blocking
+# "Drake" also blocks "Drake, 21 Savage" and "X feat. Drake"). Users can layer
+# their own per-client blocks on top at request time; this set is always enforced.
+#   BLACKLIST_ARTISTS=Drake, Some Other Artist
+BLACKLIST_ARTISTS = _parse_csv(os.getenv("BLACKLIST_ARTISTS", ""))
+
 STEERING_ALPHA = 0.3
 MAX_LISTENERS = 500000
 DEFAULT_K = 10

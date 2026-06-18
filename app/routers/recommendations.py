@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException
 from app.models import RecommendationsResponse, Recommendation
 from app.db import get_cursor
-from app.services import steering, lastfm, ingest, embeddings, colisten
+from app.services import steering, lastfm, ingest, embeddings, colisten, blacklist
 from app.services.embeddings import mmr_rerank
 from app.config import DEFAULT_K, MMR_LAMBDA, MMR_POOL_MULTIPLIER, MMR_MAX_PER_ARTIST
 
@@ -14,7 +14,7 @@ TOPUP_SIMILAR_LIMIT = 30
 TOPUP_ARTIST_TOPTRACKS_LIMIT = 10
 
 
-def topup_from_lastfm(seed_track_id: str, query_embedding: list, exclude_ids: set[str], needed: int, exclude_keys: set[str] = ()) -> list[dict]:
+def topup_from_lastfm(seed_track_id: str, query_embedding: list, exclude_ids: set[str], needed: int, exclude_keys: set[str] = (), blocked_artists: set[str] = frozenset()) -> list[dict]:
     """
     Fall back to Last.fm when the local DB doesn't hold enough unseen underground
     neighbors to fill k. Pulls the seed's similar tracks, embeds+stores any we
@@ -43,6 +43,8 @@ def topup_from_lastfm(seed_track_id: str, query_embedding: list, exclude_ids: se
         for cand in candidates:
             if len(added) >= needed:
                 return
+            if blacklist.is_blocked(cand["artist"], blocked_artists):
+                continue
             try:
                 cand_id = embeddings.make_track_id(cand["artist"], cand["name"])
                 cand_key = embeddings.make_canonical_key(cand["artist"], cand["name"])
@@ -88,7 +90,8 @@ def get_recommendations(
     track_id: str,
     k: int = Query(default=DEFAULT_K, ge=1, le=50),
     lambda_param: float = Query(default=MMR_LAMBDA, ge=0.0, le=1.0, alias="lambda"),
-    exclude: list[str] = Query(default=[])
+    exclude: list[str] = Query(default=[]),
+    exclude_artists: list[str] = Query(default=[]),
 ):
     with get_cursor() as cursor:
         cursor.execute(
@@ -119,6 +122,8 @@ def get_recommendations(
 
     steered_embedding = steering.apply_steering(base_embedding, track_id)
     exclude_ids = list({track_id, *exclude})
+    # Mandatory env blacklist ∪ this client's own blocked artists.
+    blocked_artists = blacklist.normalize(exclude_artists)
 
     # A clean/explicit/remastered variant of the seed, or of anything the caller
     # already has (the `exclude` ids), shares its canonical_key but not its
@@ -137,6 +142,11 @@ def get_recommendations(
         exclude_ids=exclude_ids,
         limit=k * MMR_POOL_MULTIPLIER,
     )
+
+    # Drop blacklisted artists before ranking. The k×MMR_POOL_MULTIPLIER over-fetch
+    # plus the Last.fm top-up below absorb the shortfall, so a blocked-heavy
+    # neighborhood still returns a full k of allowed songs.
+    pool = [c for c in pool if not blacklist.is_blocked(c["artist"], blocked_artists)]
 
     # Collapse cosmetic variants: the pool is similarity-ordered, so the first
     # (highest-ranked) instance of each canonical identity wins and the rest drop.
@@ -179,7 +189,7 @@ def get_recommendations(
             embeddings.make_canonical_key(r["artist"], r["name"]) for r in reranked
         }
         reranked.extend(
-            topup_from_lastfm(track_id, steered_embedding, already, k - len(reranked), already_keys)
+            topup_from_lastfm(track_id, steered_embedding, already, k - len(reranked), already_keys, blocked_artists)
         )
 
     recommendations = [

@@ -17,6 +17,7 @@ import { type SongNodeData } from "./components/SongNode";
 import { type GraphHandle } from "./components/Graph";
 import { expandFromTrack, getSongStatus, seedSong } from "./api";
 import { prefetchSpotifyLink } from "./services/spotifyCache";
+import { blockArtist, getBlockedArtists, isArtistBlocked } from "./services/blacklist";
 import { useGraphSim } from "./hooks/useGraphSim";
 import { useIsMobile } from "./hooks/useIsMobile";
 import type { ExpansionParams, SongSearchResult } from "./types";
@@ -41,7 +42,39 @@ function arcAround(count: number, parentPos: Vec): Vec[] {
   });
 }
 
-type PopoverState = { nodeId: string; label: string; isSeed: boolean; x: number; y: number };
+// Given an initial set of node ids to remove, also remove any node left
+// disconnected from every surviving seed (orphan pruning). Shared by node
+// deletion and artist-blocking. Returns the full set of ids to remove.
+function withDisconnected(
+  nodes: Node<SongNodeData>[],
+  edges: Edge[],
+  initial: Set<string>,
+): Set<string> {
+  const adjacency = new Map<string, string[]>();
+  for (const e of edges) {
+    if (!e.source || !e.target) continue;
+    if (initial.has(e.source) || initial.has(e.target)) continue;
+    const list = adjacency.get(e.source) ?? [];
+    list.push(e.target);
+    adjacency.set(e.source, list);
+  }
+  const seeds = nodes.filter((n) => !initial.has(n.id) && n.data.isSeed).map((n) => n.id);
+  const reachable = new Set<string>(seeds);
+  const queue = [...seeds];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const next of adjacency.get(cur) ?? []) {
+      if (!reachable.has(next)) { reachable.add(next); queue.push(next); }
+    }
+  }
+  const removed = new Set<string>(initial);
+  for (const n of nodes) {
+    if (!initial.has(n.id) && !reachable.has(n.id)) removed.add(n.id);
+  }
+  return removed;
+}
+
+type PopoverState = { nodeId: string; label: string; artist: string; isSeed: boolean; x: number; y: number };
 
 // Detect whether we're running inside the Spotify OAuth popup
 const spotifyCallbackCode = new URLSearchParams(window.location.search).get("code");
@@ -122,6 +155,7 @@ export default function App() {
         await seedSong(song.track_id);
         const initialChildren = await expandFromTrack(song.track_id, "recommendations", {
           k: 8, lambda: 0.7, niche: false, maxDepth: 3, excludeIds: [],
+          excludeArtists: getBlockedArtists(),
         });
 
         let seedPos: Vec;
@@ -231,6 +265,7 @@ export default function App() {
         const fetched = await expandFromTrack(parentId, params.method, {
           k: params.k, lambda: params.lambda, niche: params.niche,
           maxDepth: params.maxDepth, excludeIds,
+          excludeArtists: getBlockedArtists(),
         });
         const children =
           params.minSimilarity > 0
@@ -294,39 +329,38 @@ export default function App() {
 
   // ── Delete a node ────────────────────────────────────────────────────────────
 
-  const handleDeleteNode = useCallback(
-    (nodeId: string) => {
-      const survivingEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
-      const adjacency = new Map<string, string[]>();
-      for (const e of survivingEdges) {
-        if (!e.source || !e.target) continue;
-        const list = adjacency.get(e.source) ?? [];
-        list.push(e.target);
-        adjacency.set(e.source, list);
-      }
-
-      const seeds = nodes.filter((n) => n.id !== nodeId && n.data.isSeed).map((n) => n.id);
-      const reachable = new Set<string>(seeds);
-      const queue = [...seeds];
-      while (queue.length) {
-        const cur = queue.shift()!;
-        for (const next of adjacency.get(cur) ?? []) {
-          if (!reachable.has(next)) { reachable.add(next); queue.push(next); }
-        }
-      }
-
-      const removed = new Set<string>([nodeId]);
-      for (const n of nodes) {
-        if (n.id !== nodeId && !reachable.has(n.id)) removed.add(n.id);
-      }
-
+  const removeNodeSet = useCallback(
+    (initial: Set<string>) => {
+      if (initial.size === 0) return;
+      const removed = withDisconnected(nodes, edges, initial);
       setNodes((nds) => nds.filter((n) => !removed.has(n.id)));
       setEdges((eds) => eds.filter((e) => !removed.has(e.source!) && !removed.has(e.target!)));
-
       removeNodesFromSim(removed);
-      setPopover(null);
     },
     [nodes, edges, setNodes, setEdges, removeNodesFromSim],
+  );
+
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      removeNodeSet(new Set([nodeId]));
+      setPopover(null);
+    },
+    [removeNodeSet],
+  );
+
+  // Block an artist (persists to the user's local blacklist) and immediately pull
+  // every node crediting them off the graph, along with anything left orphaned.
+  // The block is also sent to the backend on future expansions via excludeArtists.
+  const handleBlockArtist = useCallback(
+    (artist: string) => {
+      blockArtist(artist);
+      const matching = new Set(
+        nodes.filter((n) => isArtistBlocked(n.data.artist, [artist])).map((n) => n.id),
+      );
+      removeNodeSet(matching);
+      setPopover(null);
+    },
+    [nodes, removeNodeSet],
   );
 
   const handleNodeClick: NodeMouseHandler = useCallback((event, node) => {
@@ -334,6 +368,7 @@ export default function App() {
     setPopover({
       nodeId: node.id,
       label: `${data.name} — ${data.artist}`,
+      artist: data.artist,
       isSeed: data.isSeed,
       x: event.clientX,
       y: event.clientY,
@@ -392,11 +427,13 @@ export default function App() {
             <NodePopover
               key={popover.nodeId}
               nodeLabel={popover.label}
+              artist={popover.artist}
               trackId={popover.nodeId}
               isSeed={popover.isSeed}
               loading={loading}
               onExpand={handleExpand}
               onDelete={() => handleDeleteNode(popover.nodeId)}
+              onBlockArtist={() => handleBlockArtist(popover.artist)}
               onClose={() => setPopover(null)}
               mobile
             />
@@ -405,11 +442,13 @@ export default function App() {
           <NodePopover
             key={popover.nodeId}
             nodeLabel={popover.label}
+            artist={popover.artist}
             trackId={popover.nodeId}
             isSeed={popover.isSeed}
             loading={loading}
             onExpand={handleExpand}
             onDelete={() => handleDeleteNode(popover.nodeId)}
+            onBlockArtist={() => handleBlockArtist(popover.artist)}
             onClose={() => setPopover(null)}
             x={popover.x}
             y={popover.y}

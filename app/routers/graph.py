@@ -4,7 +4,7 @@ from app.models import (
     GraphTagsRequest, DominantTagsResponse,
 )
 from app.db import get_cursor
-from app.services import lastfm, embeddings, ingest, colisten
+from app.services import lastfm, embeddings, ingest, colisten, blacklist
 from app.config import DEFAULT_K
 
 SEED_SIMILAR_LIMIT = 25
@@ -116,6 +116,8 @@ def add_seed(request: SeedRequest):
         exclude_ids=[request.track_id],
         limit=DEFAULT_K,
     )
+    # Never let a blocked artist become a graph node / edge.
+    candidates = [c for c in candidates if not blacklist.is_blocked(c["artist"])]
 
     similar = lastfm.get_similar_tracks(artist, name, limit=SEED_SIMILAR_LIMIT)
     colisten.record_edges(artist, name, similar, source="track_similar")
@@ -138,6 +140,8 @@ def add_seed(request: SeedRequest):
     def process_similar_tracks(similar_list):
         added = 0
         for sim in similar_list:
+            if blacklist.is_blocked(sim["artist"]):
+                continue
             try:
                 sim_id = embeddings.make_track_id(sim["artist"], sim["name"])
                 sim_key = embeddings.make_canonical_key(sim["artist"], sim["name"])

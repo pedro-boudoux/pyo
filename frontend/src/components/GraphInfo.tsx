@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getDominantTags } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { unblockArtist, useBlockedArtists } from "../services/blacklist";
 
 const TIP_WIDTH = 240;
 
@@ -113,6 +114,7 @@ function Stat({ label, value }: { label: string; value: number }) {
 export function GraphInfo({ nodeCount, edgeCount, trackIds }: Props) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
+  const blocked = useBlockedArtists();
   const isMobile = useIsMobile();
   // On phones the panel starts collapsed to a compact chip so it doesn't eat
   // half the screen; tapping the header expands the full stats + tags.
@@ -254,6 +256,35 @@ export function GraphInfo({ nodeCount, edgeCount, trackIds }: Props) {
                   })}
                 </ul>
               )}
+            </div>
+          </>
+        )}
+
+        {blocked.length > 0 && (
+          <>
+            <div aria-hidden className="h-px bg-[#656565]/15" />
+            <div className="flex flex-col gap-3">
+              <p className="font-medium text-[#909090] text-[10px] uppercase tracking-wider leading-none">
+                Blocked Artists
+              </p>
+              <ul className="flex flex-wrap gap-1.5">
+                {blocked.map((artist) => (
+                  <li key={artist}>
+                    <button
+                      type="button"
+                      onClick={() => unblockArtist(artist)}
+                      title={`Unblock ${artist}`}
+                      className="group flex items-center gap-1 max-w-[150px] rounded-full border border-[#d0d0d0] bg-white/60 pl-2.5 pr-1.5 py-1 text-[11px] font-medium text-[#5a5a5a] hover:border-[#a0a0a0] hover:bg-white transition"
+                    >
+                      <span className="truncate">{artist}</span>
+                      <span aria-hidden className="text-[#a0a0a0] group-hover:text-[#3a3a3a] leading-none">×</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[10px] text-[#909090] leading-snug">
+                Not recommended to you. Tap to unblock.
+              </p>
             </div>
           </>
         )}

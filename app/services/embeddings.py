@@ -76,6 +76,15 @@ _ARTIST_SPLIT = re.compile(
 )
 
 
+def split_credits(artist: str) -> list[str]:
+    """
+    Every individually-credited artist in a combined credit string, split on the
+    usual separators (",", "&", "/", " x ", feat./ft./featuring/vs/with). Used by
+    the embedding fallback (primary credit) and by blacklist matching (any credit).
+    """
+    return [part.strip() for part in _ARTIST_SPLIT.split(artist.strip()) if part.strip()]
+
+
 def primary_artist(artist: str) -> str:
     """
     The first credited artist from a multi-artist string. Last.fm doesn't resolve
@@ -85,8 +94,8 @@ def primary_artist(artist: str) -> str:
     (make_track_id / make_canonical_key) still use the full credit; this only feeds
     a tag-lookup fallback in the embedding pipeline.
     """
-    primary = _ARTIST_SPLIT.split(artist.strip(), maxsplit=1)[0].strip()
-    return primary or artist.strip()
+    parts = split_credits(artist)
+    return parts[0] if parts else artist.strip()
 
 
 def make_canonical_key(artist: str, track: str) -> str:
