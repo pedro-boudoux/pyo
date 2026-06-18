@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ExpansionMethod, ExpansionParams } from "../types";
 import { DEFAULT_EXPANSION } from "../types";
+import { getSongFeatures } from "../api";
 import { getCachedSpotifyLink, prefetchSpotifyLink } from "../services/spotifyCache";
+
+// How many of the track's top tags to show under the title.
+const MAX_TAGS = 5;
+// Tags rarely change for a track, so cache them across popover opens.
+const tagCache = new Map<string, string[]>();
 
 // Keep in sync with the .popover-out duration in index.css
 const EXIT_MS = 150;
@@ -144,6 +150,29 @@ export function NodePopover({
     };
   }, [trackId, cached]);
 
+  // The track's top tags, shown under the title. Cached after the first open;
+  // a graph node is always already embedded, so this is a fast cache hit.
+  const [tags, setTags] = useState<string[]>(() => tagCache.get(trackId) ?? []);
+  useEffect(() => {
+    if (tagCache.has(trackId)) {
+      setTags(tagCache.get(trackId)!);
+      return;
+    }
+    let cancelled = false;
+    getSongFeatures(trackId)
+      .then((f) => {
+        const top = f.tags.slice(0, MAX_TAGS);
+        tagCache.set(trackId, top);
+        if (!cancelled) setTags(top);
+      })
+      .catch(() => {
+        // non-fatal — just show no tags
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [trackId]);
+
   // Play the exit animation, then let the parent unmount us. On mobile the sheet
   // slides back down (and the backdrop fades) before unmounting.
   const close = useCallback(() => {
@@ -246,6 +275,11 @@ export function NodePopover({
               Expand from
             </div>
             <div className="truncate font-semibold text-[#1a1a1a]">{nodeLabel}</div>
+            {tags.length > 0 && (
+              <div className="mt-1 text-[10px] leading-snug text-[#9a9a9a] capitalize">
+                {tags.join(" · ")}
+              </div>
+            )}
             {spotify.status === "loading" && (
               <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[#8a8a8a]">
                 <SpotifyIcon className="w-3.5 h-3.5 animate-pulse" />

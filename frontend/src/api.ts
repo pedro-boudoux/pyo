@@ -34,6 +34,21 @@ export function getSongStatus(track_id: string) {
   );
 }
 
+export type TrackFeatures = {
+  track_id: string;
+  name: string;
+  artist: string;
+  listeners: number;
+  tags: string[];
+  embedding: number[];
+};
+
+// Cache hit (already embedded — true for any node on the graph) returns the
+// stored tags without hitting Last.fm.
+export function getSongFeatures(track_id: string) {
+  return request<TrackFeatures>(`/songs/${track_id}/features`);
+}
+
 export function getSpotifyLink(track_id: string) {
   // checked=false means the backend couldn't reach Spotify (not a definitive
   // "not on Spotify") — callers should not cache that result.
