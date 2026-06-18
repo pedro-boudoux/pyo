@@ -142,6 +142,18 @@ html, body, #root {
   animation: seed-scrim-in var(--dur-med) var(--ease-out) both;
 }
 
+/* ── Animated grid background (GPU-composited; replaces the canvas ShapeGrid) ──
+   The grid is a repeating gradient that translates exactly one cell, looping
+   seamlessly. Runs entirely on the compositor — zero main-thread cost per frame,
+   so it never competes with ReactFlow + the force sim. */
+@keyframes grid-pan {
+  to { transform: translate3d(var(--grid-cell), var(--grid-cell), 0); }
+}
+.grid-pan {
+  animation: grid-pan linear infinite;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .eq-bar { animation: none; transform: scaleY(0.6); }
 }
@@ -162,4 +174,5 @@ input:focus-visible {
   .fade-up { animation: none; }
   .popover-in, .popover-out { animation: none; }
   .scroll-bob { animation: none; }
+  .grid-pan { animation: none; }
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { exchangeCodeForToken } from "./services/spotify";
-import { ShapeGrid } from "./components/ShapeGrid";
+import { GridBackground } from "./components/GridBackground";
 import {
   addEdge,
   useEdgesState,
@@ -354,16 +354,7 @@ export default function App() {
     <div className="h-full w-full relative overflow-hidden bg-[#FAFAFA]">
       {hasGraph ? (
         <>
-          <div className="absolute inset-0">
-            <ShapeGrid
-              direction="diagonal"
-              speed={0.5}
-              borderColor="rgba(0,0,0,0.03)"
-              hoverFillColor="rgba(255,255,255,0.00)"
-              squareSize={44}
-              hoverTrailAmount={0}
-            />
-          </div>
+          <GridBackground />
           <GraphView
             nodes={nodes}
             edges={edges}

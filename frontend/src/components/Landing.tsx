@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Hero } from "./Hero";
-import { ShapeGrid } from "./ShapeGrid";
+import { GridBackground } from "./GridBackground";
 import type { SongSearchResult } from "../types";
 
 type Props = {
@@ -19,16 +19,7 @@ export function Landing({ onPick, disabled }: Props) {
     <div className="absolute inset-0 overflow-x-hidden overflow-y-auto">
       {/* Section 1 — hero over the animated grid, one viewport tall */}
       <section className="relative h-full w-full">
-        <div className="absolute inset-0">
-          <ShapeGrid
-            direction="diagonal"
-            speed={0.5}
-            borderColor="rgba(0,0,0,0.03)"
-            hoverFillColor="rgba(255,255,255,0.00)"
-            squareSize={44}
-            hoverTrailAmount={0}
-          />
-        </div>
+        <GridBackground />
 
         <Hero onPick={onPick} disabled={disabled} />
 
