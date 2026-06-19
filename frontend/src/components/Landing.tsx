@@ -127,7 +127,7 @@ export function Landing({ onPick, disabled }: Props) {
           </div>
 
           {/* Images */}
-          <div className="order-first flex flex-col items-center gap-6 md:order-none">
+          <div className="flex flex-col items-center gap-6">
             <img
               className="h-auto w-full max-w-[360px]"
               src={`${import.meta.env.BASE_URL}images/tiffany-day.png`}
