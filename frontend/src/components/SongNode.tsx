@@ -8,6 +8,9 @@ export type SongNodeData = {
   isSeed: boolean;
   similarity?: number;
   listeners?: number;
+  // Top tags delivered with the expansion response, so the popover shows them
+  // without re-fetching /features (issue #22). Absent on the seed node.
+  tags?: string[];
 };
 
 export const NODE_SIZE = 190;

@@ -192,6 +192,11 @@ def get_recommendations(
             topup_from_lastfm(track_id, steered_embedding, already, k - len(reranked), already_keys, blocked_artists)
         )
 
+    # Ship each pick's top tags with the response so the node popover renders them
+    # without a second /features round-trip (issue #22). One batched read of the
+    # already-stored songs.tags — no extra Last.fm calls; missing tags → empty list.
+    tags_by_id = _fetch_tags([r["track_id"] for r in reranked])
+
     recommendations = [
         Recommendation(
             track_id=r["track_id"],
@@ -200,8 +205,23 @@ def get_recommendations(
             similarity=r["similarity"],
             listeners=r["listeners"],
             image=r["image"],
+            tags=tags_by_id.get(r["track_id"], []),
         )
         for r in reranked
     ]
 
     return RecommendationsResponse(recommendations=recommendations)
+
+
+def _fetch_tags(track_ids: list[str]) -> dict[str, list[str]]:
+    """Batch-load the stored {tag: count} dict for each track and return it as the
+    ordered tag list the popover shows (most-applied first). Reads songs.tags only
+    — no embedding/API work — so it's a single cheap query per recommendation call."""
+    if not track_ids:
+        return {}
+    with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT track_id, tags FROM songs WHERE track_id = ANY(%s)",
+            (track_ids,),
+        )
+        return {r["track_id"]: embeddings.sorted_tags(r["tags"] or {}) for r in cursor.fetchall()}

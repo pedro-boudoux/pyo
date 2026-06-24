@@ -12,6 +12,9 @@ export type Recommendation = {
   similarity: number;
   listeners: number;
   image: string | null;
+  // Top tags delivered with the response so the popover shows them without a
+  // second /features round-trip (issue #22). Older backends omit it → default [].
+  tags: string[];
 };
 
 export type PlaylistTrack = {
@@ -21,6 +24,7 @@ export type PlaylistTrack = {
   similarity: number;
   listeners: number;
   image: string | null;
+  tags: string[];
 };
 
 export type ExpansionMethod = "recommendations" | "linear" | "tree";

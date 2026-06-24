@@ -261,6 +261,21 @@ def cosine_similarity(a: list, b: list) -> float:
     return float(dot / (norm_a * norm_b))
 
 
+def sorted_tags(tag_counts: dict, limit: int | None = None) -> list[str]:
+    """
+    A single track's tags as a flat list, most-applied first, read from its raw
+    blended {tag: count} dict (songs.tags). The dense averaged embedding can't be
+    inverted back to discrete tags, so this is the one place that turns a stored
+    tag dict into the ordered list the UI shows under a node title. Reused by
+    /songs/{id}/features and the recommendation/playlist responses (issue #22) so
+    the sort isn't re-inlined. An empty/None dict yields [].
+    """
+    if not tag_counts:
+        return []
+    ordered = [t for t, _ in sorted(tag_counts.items(), key=lambda kv: kv[1], reverse=True)]
+    return ordered[:limit] if limit is not None else ordered
+
+
 def dominant_tags(tag_dicts: list[dict], top_n: int = 15) -> list[dict]:
     """
     Aggregate the dominant tags across a set of songs (e.g. every node in a graph)

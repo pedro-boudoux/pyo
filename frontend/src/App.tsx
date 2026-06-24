@@ -74,7 +74,7 @@ function withDisconnected(
   return removed;
 }
 
-type PopoverState = { nodeId: string; label: string; artist: string; isSeed: boolean; x: number; y: number };
+type PopoverState = { nodeId: string; label: string; artist: string; isSeed: boolean; tags?: string[]; x: number; y: number };
 
 // Detect whether we're running inside the Spotify OAuth popup
 const spotifyCallbackCode = new URLSearchParams(window.location.search).get("code");
@@ -186,7 +186,7 @@ export default function App() {
             id: c.track_id,
             type: "song",
             position: childPositions[i],
-            data: { name: c.name, artist: c.artist, image: c.image, isSeed: false, similarity: c.similarity, listeners: c.listeners },
+            data: { name: c.name, artist: c.artist, image: c.image, isSeed: false, similarity: c.similarity, listeners: c.listeners, tags: c.tags },
           }));
 
         const newEdges: Edge[] = initialChildren.map((c) => ({
@@ -282,7 +282,7 @@ export default function App() {
           id: c.track_id,
           type: "song",
           position: initialPositions[i],
-          data: { name: c.name, artist: c.artist, image: c.image, isSeed: false, similarity: c.similarity, listeners: c.listeners },
+          data: { name: c.name, artist: c.artist, image: c.image, isSeed: false, similarity: c.similarity, listeners: c.listeners, tags: c.tags },
         }));
 
         const newEdges: Edge[] = children.map((c) => ({
@@ -370,6 +370,7 @@ export default function App() {
       label: `${data.name} — ${data.artist}`,
       artist: data.artist,
       isSeed: data.isSeed,
+      tags: data.tags,
       x: event.clientX,
       y: event.clientY,
     });
@@ -430,6 +431,7 @@ export default function App() {
               artist={popover.artist}
               trackId={popover.nodeId}
               isSeed={popover.isSeed}
+              tags={popover.tags}
               loading={loading}
               onExpand={handleExpand}
               onDelete={() => handleDeleteNode(popover.nodeId)}
@@ -445,6 +447,7 @@ export default function App() {
             artist={popover.artist}
             trackId={popover.nodeId}
             isSeed={popover.isSeed}
+            tags={popover.tags}
             loading={loading}
             onExpand={handleExpand}
             onDelete={() => handleDeleteNode(popover.nodeId)}
