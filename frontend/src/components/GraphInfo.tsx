@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getDominantTags } from "../api";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { RestartButton } from "./RestartButton";
 import { unblockArtist, useBlockedArtists } from "../services/blacklist";
 
 const TIP_WIDTH = 240;
@@ -12,6 +13,7 @@ type Props = {
   nodeCount: number;
   edgeCount: number;
   trackIds: string[];
+  onRestart: () => void;
 };
 
 const SKELETON_WIDTHS = [82, 64, 73, 50];
@@ -111,7 +113,7 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function GraphInfo({ nodeCount, edgeCount, trackIds }: Props) {
+export function GraphInfo({ nodeCount, edgeCount, trackIds, onRestart }: Props) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
   const blocked = useBlockedArtists();
@@ -288,6 +290,11 @@ export function GraphInfo({ nodeCount, edgeCount, trackIds }: Props) {
             </div>
           </>
         )}
+
+        {/* Restart — part of the body so it collapses with the card on mobile,
+            sitting alongside the tag/blocked-artist controls (issue #13). */}
+        <div aria-hidden className="h-px bg-[#656565]/15" />
+        <RestartButton onRestart={onRestart} />
           </div>
           </div>
         </div>

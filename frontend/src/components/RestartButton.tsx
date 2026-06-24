@@ -5,9 +5,11 @@ type Props = {
 };
 
 // Restart control (issue #13) — clears every node and returns the graph to its
-// empty/landing state. Click once to arm ("Start over?"), click again to confirm,
-// so the graph isn't nuked by accident. Disarms on its own after a few seconds or
-// when the pointer leaves. Matches the glass visual language of ZoomControls.
+// empty/landing state. Lives inside the Graph Info card's body (so it collapses
+// away with the rest on mobile). Click once to arm ("Sure?"), click again to
+// confirm, so the graph isn't nuked by accident. Disarms after a few seconds or
+// when the pointer leaves. Styled to match the card's inline controls (the
+// blocked-artist chips), not the standalone glass pills.
 export function RestartButton({ onRestart }: Props) {
   const [armed, setArmed] = useState(false);
 
@@ -19,6 +21,7 @@ export function RestartButton({ onRestart }: Props) {
 
   return (
     <button
+      type="button"
       onClick={() => {
         if (armed) {
           onRestart();
@@ -30,38 +33,22 @@ export function RestartButton({ onRestart }: Props) {
       onMouseLeave={() => setArmed(false)}
       aria-label={armed ? "Confirm start over" : "Start over"}
       title={armed ? "Click again to clear the graph" : "Start over"}
-      className="relative overflow-hidden rounded-[25px] h-[40px] flex items-center justify-center gap-2 px-[14px] shadow-[0px_1px_4.1px_0px_rgba(0,0,0,0.25)] transition-all duration-200 hover:scale-[1.025] hover:shadow-[0px_6px_20px_rgba(0,0,0,0.18)]"
+      className={`flex w-full items-center justify-center gap-2 rounded-[12px] border px-3 py-2 text-xs font-medium transition ${
+        armed
+          ? "border-red-300 bg-red-50/70 text-red-500"
+          : "border-[#d0d0d0] bg-white/60 text-[#5a5a5a] hover:border-[#a0a0a0] hover:bg-white"
+      }`}
     >
-      <div
-        aria-hidden
-        className="absolute inset-0 backdrop-blur-[2.5px] bg-white/75 rounded-[25px] pointer-events-none"
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none rounded-[25px] shadow-[inset_0px_4px_4px_0px_rgba(255,255,255,0.25)]"
-      />
-      <span
-        className={`relative flex items-center justify-center transition-colors ${
-          armed ? "text-red-500" : "text-[#09090B]/60"
-        }`}
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path
-            d="M11.5 5.5A4.75 4.75 0 1 0 12 8.5M11.5 1.5v4h-4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-      <span
-        className={`relative text-xs font-medium leading-none transition-colors ${
-          armed ? "text-red-500" : "text-[#09090B]/60"
-        }`}
-      >
-        {armed ? "Sure?" : "Start over"}
-      </span>
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+        <path
+          d="M11.5 5.5A4.75 4.75 0 1 0 12 8.5M11.5 1.5v4h-4"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span className="leading-none">{armed ? "Confirm Start Over" : "Start Over"}</span>
     </button>
   );
 }
