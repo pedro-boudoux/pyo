@@ -15,8 +15,28 @@ from app.services.embeddings import (
     mmr_rerank,
     build_tag_vector,
     dominant_tags,
+    sorted_tags,
     get_or_create_tag_ids,
 )
+
+
+# ---------------------------------------------------------------------------
+# sorted_tags — a single track's {tag: count} dict → ordered list (issue #22)
+# ---------------------------------------------------------------------------
+
+class TestSortedTags:
+    def test_empty_or_none_returns_empty(self):
+        assert sorted_tags({}) == []
+        assert sorted_tags(None) == []
+
+    def test_orders_by_count_descending(self):
+        assert sorted_tags({"rock": 3, "jazz": 10, "pop": 5}) == ["jazz", "pop", "rock"]
+
+    def test_limit_caps_results(self):
+        assert sorted_tags({"a": 5, "b": 4, "c": 3, "d": 2}, limit=2) == ["a", "b"]
+
+    def test_no_limit_returns_all(self):
+        assert sorted_tags({"a": 2, "b": 1}) == ["a", "b"]
 
 
 # ---------------------------------------------------------------------------

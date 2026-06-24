@@ -40,6 +40,10 @@ type Props = {
   artist?: string;
   trackId: string;
   isSeed: boolean;
+  /** Top tags delivered with the node's expansion response (issue #22). When
+   *  present the popover shows them immediately; otherwise it falls back to a
+   *  /features fetch (e.g. the seed node, which carries no tags). */
+  tags?: string[];
   loading: boolean;
   onExpand: (params: ExpansionParams) => void;
   onDelete: () => void;
@@ -59,6 +63,7 @@ export function NodePopover({
   artist,
   trackId,
   isSeed,
+  tags: tagsProp,
   loading,
   onExpand,
   onDelete,
@@ -150,10 +155,20 @@ export function NodePopover({
     };
   }, [trackId, cached]);
 
-  // The track's top tags, shown under the title. Cached after the first open;
-  // a graph node is always already embedded, so this is a fast cache hit.
-  const [tags, setTags] = useState<string[]>(() => tagCache.get(trackId) ?? []);
+  // The track's top tags, shown under the title. Preferred source is the tags
+  // delivered with the expansion response (issue #22) — no round-trip. We only
+  // fall back to a /features fetch for nodes that carry none (e.g. the seed node,
+  // or older nodes created before this change). Cached after the first resolve.
+  const propTags = tagsProp && tagsProp.length > 0 ? tagsProp.slice(0, MAX_TAGS) : null;
+  const [tags, setTags] = useState<string[]>(
+    () => propTags ?? tagCache.get(trackId) ?? [],
+  );
   useEffect(() => {
+    if (propTags) {
+      tagCache.set(trackId, propTags);
+      setTags(propTags);
+      return;
+    }
     if (tagCache.has(trackId)) {
       setTags(tagCache.get(trackId)!);
       return;
@@ -171,7 +186,9 @@ export function NodePopover({
     return () => {
       cancelled = true;
     };
-  }, [trackId]);
+    // propTags is derived from tagsProp; trackId keys the cache/fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackId, tagsProp]);
 
   // Play the exit animation, then let the parent unmount us. On mobile the sheet
   // slides back down (and the backdrop fades) before unmounting.

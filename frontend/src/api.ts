@@ -114,6 +114,8 @@ export type ExpandedTrack = {
   similarity: number;
   listeners: number;
   image: string | null;
+  // Top tags carried through from the recommendation/playlist response (issue #22).
+  tags: string[];
 };
 
 export function getDominantTags(track_ids: string[], top_n = 5) {
@@ -135,6 +137,11 @@ export async function expandFromTrack(
     excludeArtists?: string[];
   },
 ): Promise<ExpandedTrack[]> {
+  // Older backends may omit `tags` on each item — default to [] so callers can
+  // rely on tags always being an array (issue #22).
+  const withTags = (items: ExpandedTrack[]): ExpandedTrack[] =>
+    items.map((t) => ({ ...t, tags: t.tags ?? [] }));
+
   if (method === "recommendations") {
     const data = await getRecommendations(
       track_id,
@@ -143,7 +150,7 @@ export async function expandFromTrack(
       opts.excludeIds,
       opts.excludeArtists ?? [],
     );
-    return data.recommendations;
+    return withTags(data.recommendations);
   }
   if (method === "linear") {
     const data = await linearPlaylist(
@@ -152,7 +159,7 @@ export async function expandFromTrack(
       opts.niche,
       opts.excludeIds,
     );
-    return data.tracks;
+    return withTags(data.tracks);
   }
   const data = await treePlaylist(
     track_id,
@@ -161,5 +168,5 @@ export async function expandFromTrack(
     opts.niche,
     opts.excludeIds,
   );
-  return data.tracks;
+  return withTags(data.tracks);
 }

@@ -39,6 +39,9 @@ class Recommendation(BaseModel):
     similarity: float
     listeners: int
     image: Optional[str] = None
+    # Top tags (most-applied first) so the node popover renders them without a
+    # second /features round-trip (issue #22). Empty when the row has no tags.
+    tags: list[str] = []
 
 
 class RecommendationsResponse(BaseModel):
@@ -71,6 +74,9 @@ class PlaylistTrack(BaseModel):
     similarity: float
     listeners: int
     image: Optional[str] = None
+    # Top tags (most-applied first), same as Recommendation, so every expansion
+    # method carries tags into the popover (issue #22).
+    tags: list[str] = []
 
 
 class LinearPlaylistRequest(BaseModel):

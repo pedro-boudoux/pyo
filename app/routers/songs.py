@@ -422,8 +422,9 @@ def get_song_features(track_id: str):
 
     # The track's tags are the raw blended {tag: count} dict persisted in
     # songs.tags — a dense averaged embedding can't be inverted to discrete tags.
-    # Surface them most-applied first.
-    tags = [t for t, _ in sorted(tag_counts.items(), key=lambda kv: kv[1], reverse=True)]
+    # Surface them most-applied first (shared helper, reused by the rec/playlist
+    # responses too — issue #22).
+    tags = emb_service.sorted_tags(tag_counts)
 
     return TrackFeatures(
         track_id=track_id,

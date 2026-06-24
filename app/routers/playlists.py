@@ -79,15 +79,36 @@ def dedupe_by_canonical(rows: list[dict]) -> list[dict]:
     return out
 
 
-def to_playlist_track(row: dict) -> PlaylistTrack:
-    return PlaylistTrack(
-        track_id=row["track_id"],
-        name=row["name"],
-        artist=row["artist"],
-        similarity=round(row["similarity"], 3),
-        listeners=row["listeners"] or 0,
-        image=row.get("image")
-    )
+def _fetch_tags(track_ids: list[str]) -> dict[str, list[str]]:
+    """Batch-load the stored {tag: count} dict for each track and return the
+    ordered tag list the popover shows (most-applied first). Reads songs.tags only
+    — no embedding/API work — so the whole playlist's tags cost one query (issue #22)."""
+    if not track_ids:
+        return {}
+    with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT track_id, tags FROM songs WHERE track_id = ANY(%s)",
+            (track_ids,),
+        )
+        return {r["track_id"]: emb_service.sorted_tags(r["tags"] or {}) for r in cursor.fetchall()}
+
+
+def to_playlist_tracks(rows: list[dict]) -> list[PlaylistTrack]:
+    """Map ANN rows → PlaylistTrack, attaching each track's stored top tags so the
+    popover doesn't need a second /features round-trip (issue #22)."""
+    tags_by_id = _fetch_tags([r["track_id"] for r in rows])
+    return [
+        PlaylistTrack(
+            track_id=row["track_id"],
+            name=row["name"],
+            artist=row["artist"],
+            similarity=round(row["similarity"], 3),
+            listeners=row["listeners"] or 0,
+            image=row.get("image"),
+            tags=tags_by_id.get(row["track_id"], []),
+        )
+        for row in rows
+    ]
 
 
 @router.post("/linear", response_model=PlaylistResponse)
@@ -116,7 +137,7 @@ def linear_playlist(request: LinearPlaylistRequest):
 
     return PlaylistResponse(
         seed_track_id=request.track_id,
-        tracks=[to_playlist_track(t) for t in dedupe_by_canonical(tracks)]
+        tracks=to_playlist_tracks(dedupe_by_canonical(tracks))
     )
 
 
@@ -166,5 +187,5 @@ def tree_playlist(request: TreePlaylistRequest):
 
     return PlaylistResponse(
         seed_track_id=request.track_id,
-        tracks=[to_playlist_track(t) for t in dedupe_by_canonical(playlist)]
+        tracks=to_playlist_tracks(dedupe_by_canonical(playlist))
     )

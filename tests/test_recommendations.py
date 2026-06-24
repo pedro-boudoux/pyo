@@ -557,3 +557,26 @@ class TestRecommendationsRouter:
         )
         response = client.get("/recommendations/nope")
         assert "not found" in response.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
+# _fetch_tags — batches songs.tags into the ordered tag list for the response
+# (issue #22: tags ship with recommendations so the popover needs no re-fetch).
+# ---------------------------------------------------------------------------
+
+class TestFetchTags:
+    def test_empty_ids_returns_empty_without_query(self, monkeypatch):
+        from app.routers import recommendations as recs
+        # get_cursor must not even be called for an empty id list.
+        monkeypatch.setattr(recs, "get_cursor", lambda *a, **k: (_ for _ in ()).throw(AssertionError("queried")))
+        assert recs._fetch_tags([]) == {}
+
+    def test_orders_tags_by_count_and_handles_null(self, monkeypatch):
+        from app.routers import recommendations as recs
+        rows = [
+            {"track_id": "a", "tags": {"rock": 2, "indie": 9}},
+            {"track_id": "b", "tags": None},
+        ]
+        monkeypatch.setattr(recs, "get_cursor", make_fake_get_cursor(rows))
+        out = recs._fetch_tags(["a", "b"])
+        assert out == {"a": ["indie", "rock"], "b": []}
