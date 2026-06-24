@@ -387,6 +387,7 @@ export default function App() {
     setEdges([]);
     setPopover(null);
     setError(null);
+    setNotice(null);
     setSeedingPhase(null);
     setLoading(false);
   }, [removeNodesFromSim, simNodesRef, setNodes, setEdges]);
