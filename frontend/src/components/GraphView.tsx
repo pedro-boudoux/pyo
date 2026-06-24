@@ -1,6 +1,7 @@
 import type { Edge, Node, NodeDragHandler, NodeMouseHandler, OnEdgesChange, OnNodesChange } from "reactflow";
 import { Graph, type GraphHandle } from "./Graph";
 import { GraphInfo } from "./GraphInfo";
+import { RestartButton } from "./RestartButton";
 import { SearchBar } from "./SearchBar";
 import { SeedingStatus } from "./SeedingStatus";
 import { SpotifyExportButton } from "./SpotifyExportButton";
@@ -31,6 +32,7 @@ export type GraphViewProps = {
   trackIds: string[];
   edgeCount: number;
   graphRef: React.RefObject<GraphHandle | null>;
+  onRestart: () => void;
 };
 
 export function GraphView({
@@ -48,6 +50,7 @@ export function GraphView({
   trackIds,
   edgeCount,
   graphRef,
+  onRestart,
 }: GraphViewProps) {
   return (
     <>
@@ -94,6 +97,12 @@ export function GraphView({
       {/* Graph info — top-right */}
       <div className="absolute right-3 top-3 sm:right-5 sm:top-[29px] z-10">
         <GraphInfo nodeCount={nodes.length} edgeCount={edgeCount} trackIds={trackIds} />
+      </div>
+
+      {/* Restart — bottom-left, sitting above the zoom controls (which are
+          desktop-only, so this hugs the corner on mobile). */}
+      <div className="absolute left-3 bottom-4 sm:left-5 sm:bottom-[160px] z-10">
+        <RestartButton onRestart={onRestart} />
       </div>
 
       {/* Search bar + seeding status — bottom-center */}

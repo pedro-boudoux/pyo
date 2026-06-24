@@ -363,6 +363,20 @@ export default function App() {
     [nodes, removeNodeSet],
   );
 
+  // Restart (issue #13) — wipe every node/edge and return to the empty landing
+  // state, exactly as it was before the first seed. Clears the physics sim through
+  // its own bookkeeping (removeNodesFromSim) so no stale nodes leak in, and resets
+  // the popover/error/seeding state.
+  const handleRestart = useCallback(() => {
+    removeNodesFromSim(new Set(simNodesRef.current.keys()));
+    setNodes([]);
+    setEdges([]);
+    setPopover(null);
+    setError(null);
+    setSeedingPhase(null);
+    setLoading(false);
+  }, [removeNodesFromSim, simNodesRef, setNodes, setEdges]);
+
   const handleNodeClick: NodeMouseHandler = useCallback((event, node) => {
     const data = node.data as SongNodeData;
     setPopover({
@@ -405,6 +419,7 @@ export default function App() {
             trackIds={nodes.map((n) => n.id)}
             edgeCount={edges.length}
             graphRef={graphRef}
+            onRestart={handleRestart}
           />
         </>
       ) : (
