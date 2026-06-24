@@ -91,6 +91,10 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [seedingPhase, setSeedingPhase] = useState<SeedingPhase>(null);
   const [error, setError] = useState<string | null>(null);
+  // Informational message, distinct from a hard `error`: e.g. a seed landed fine
+  // but turned up zero underground neighbours. Rendered as a neutral toast, not
+  // red — the seed node still appears, this just explains the lone node.
+  const [notice, setNotice] = useState<string | null>(null);
 
   const graphRef = useRef<GraphHandle>(null);
   const isMobile = useIsMobile();
@@ -140,6 +144,7 @@ export default function App() {
     async (song: SongSearchResult) => {
       setSeedingPhase("checking");
       setError(null);
+      setNotice(null);
       try {
         let cached = false;
         try {
@@ -157,6 +162,15 @@ export default function App() {
           k: 8, lambda: 0.7, niche: false, maxDepth: 3, excludeIds: [],
           excludeArtists: getBlockedArtists(),
         });
+
+        // Seed landed but the backend found nothing similar underground for it.
+        // We still place the seed node below; surface a friendly heads-up so the
+        // lone node doesn't read as a silent failure. Not a hard `error`.
+        if (initialChildren.length === 0) {
+          setNotice(
+            `Couldn't dig up any underground tracks near "${song.name}" — it's a little too off the map. Try seeding something else, or expand from here later.`,
+          );
+        }
 
         let seedPos: Vec;
         if (isFirstSeed) {
@@ -465,6 +479,20 @@ export default function App() {
           <div className="relative px-4 py-2 text-sm text-red-600 flex items-center gap-3">
             {error}
             <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 transition-colors">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Informational notice (e.g. no recommendations) — neutral, not red, and
+          stacked above the error slot so both can coexist. */}
+      {notice && (
+        <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-40 max-w-[22rem] overflow-hidden rounded-xl shadow-[0px_1px_4.1px_0px_rgba(0,0,0,0.25)]">
+          <div aria-hidden className="absolute inset-0 backdrop-blur-[4px] bg-white/90 rounded-xl pointer-events-none" />
+          <div className="relative px-4 py-2 text-sm text-black/70 flex items-start gap-3">
+            <span>{notice}</span>
+            <button onClick={() => setNotice(null)} className="shrink-0 text-black/30 hover:text-black/60 transition-colors">
               ×
             </button>
           </div>
