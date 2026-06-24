@@ -23,7 +23,7 @@ ceiling is `listeners < 500_000` (`MAX_LISTENERS`).
 | Song search | Last.fm `track.search` + local Postgres cache | No login, and we reuse songs we've already embedded |
 | Tags + listener counts | Last.fm API | Tag-based embeddings, listener counts, similar tracks — all free |
 | Album covers | Deezer + iTunes | Last.fm stopped serving real artist/album images |
-| Embeddings | numpy | Normalize + blend Last.fm tag vectors |
+| Embeddings | fastembed (all-MiniLM-L6-v2, ONNX/CPU) + numpy | Encode Last.fm tags into a shared semantic space, then count-weighted average |
 | Vector DB | Postgres + pgvector | ANN search + graph state in one DB |
 | Hosting | Railway (API) + Neon (Postgres) + GitHub Pages (frontend) | Railway runs the FastAPI service via the `Procfile`, Neon is managed Postgres with pgvector, the Vite build is published to GitHub Pages |
 
@@ -35,6 +35,7 @@ uvicorn
 requests
 numpy
 scikit-learn
+fastembed          # ONNX all-MiniLM-L6-v2 tag encoder (no torch — keeps the build light)
 psycopg2-binary
 pgvector
 python-dotenv
@@ -130,7 +131,7 @@ value simply means "no folding" for that row (graceful), backfilled via
    - **Reject** → stored as a negative; future queries from the parent seed steer away
 6. User exports a branch → `POST /playlists/linear` or `POST /playlists/tree`
 
-### Embedding strategy (blended tags)
+### Embedding strategy (semantic blended tags — algorithm 2.0, Phase 1)
 
 A single embedding blends **three** Last.fm tag sources into one
 `{tag: count}` dict (`lastfm.blend_tags`), so the vector reflects both the
@@ -142,16 +143,40 @@ specific track and its broader stylistic context:
 | Artist tags (context) | `artist.getTopTags` | `0.3` |
 | Similar-artist tags | `artist.getSimilar` → `artist.getTopTags` each | `0.1 × match` |
 
-Then (`embeddings.py`):
+> **This replaced the old sparse-slot model.** Until algorithm 2.0 the embedding
+> was a sparse `vector(300)` where each `tag_vocab.id` *was* a dimension and the
+> value was the normalized blended count. The problem: unrelated spellings/synonyms
+> ("hip hop" vs "rap") landed in unrelated slots, so semantically close tracks
+> weren't close in vector space. The dense semantic model below fixes that. The old
+> 300-dim vector is preserved per row as `embedding_legacy_300` for rollback.
+
+The pipeline (`embeddings.build_tag_vector` → `tag_encoder`):
 
 1. Clean each tag: `tag.lower().strip()` — collapses "Hip-Hop"/"hip hop"/"hip-hop".
-2. Upsert tags into `tag_vocab`; each tag's row `id` is its slot in the vector.
-3. Normalize by dividing by the max blended count (top tag → `1.0`).
-4. Write into a dense `float[EMBEDDING_DIM]` (300) aligned to the vocab.
+2. **Encode each tag string to a 384-dim vector** with `all-MiniLM-L6-v2`
+   (`fastembed`, ONNX on CPU, no torch). Each unique tag is encoded **once** and the
+   vector is cached in `tag_vocab.embedding` — the same handful of tags ("rock",
+   "electronic", …) recur across thousands of songs, so the backfill stays cheap.
+3. The track vector is the **count-weighted average** of its tag vectors
+   (`Σ count·tag_vec`), then **L2-normalized**.
+4. Store the dense `vector(384)` on `songs.embedding`, and the raw `{tag: count}`
+   dict on `songs.tags` (jsonb) — a dense averaged vector can't be inverted back to
+   discrete tags, so `dominant_tags` / `/features` read tags from there now.
 
-Tags whose vocab `id >= EMBEDDING_DIM` are dropped (the vector is capped at 300
-dimensions). Artists with overlapping high-count tags score high on cosine
-similarity; low-count tags contribute little, which is the right behaviour.
+Weighting by count means a track's dominant tags pull its vector hardest (same
+intent as the old normalized-slot model), but tags now live in a shared semantic
+space, so "hip hop" and "rap" land near each other. A track with no usable tags
+yields an all-zero vector, which downstream code guards against. `tag_vocab.id` is
+no longer a vector slot — it's just the row PK; the meaningful column is
+`tag_vocab.embedding` (the cached per-tag MiniLM vector).
+
+> **Phase 2 (in progress) — co-listening half.** Every `getSimilar` result is also
+> persisted as a weighted edge in `colisten_edges` (see `services/colisten.py`), pure
+> append-only data collection with zero new Last.fm calls, so a dense co-listening
+> graph accumulates for future node2vec training. It is **not yet blended into the
+> live vector** — `EMBEDDING_DIM` is still `384`. The plan (`NEW_ALGORITHM_IMPLEMENTATION.md`)
+> widens it to `384 + 128 = 512` (`normalize(concat(tag_vec, β·colisten_vec))`) once
+> the graph is dense enough.
 
 ### ANN search + diversity (recommendations)
 
@@ -258,7 +283,9 @@ CREATE TABLE songs (
     artist     TEXT NOT NULL,
     listeners  INTEGER,
     image      TEXT,                   -- resolved album/artist cover URL
-    embedding  vector(300),
+    embedding  vector(384),            -- dense semantic tag vector (algorithm 2.0, Phase 1)
+    embedding_legacy_300 vector(300),  -- old sparse slot vector, kept for rollback
+    tags       jsonb,                  -- raw blended {tag: count} dict (dominant_tags / /features read this)
     spotify_url        TEXT,           -- cached open.spotify.com link (NULL = none)
     spotify_checked_at TIMESTAMPTZ,    -- when we resolved it (NULL = never looked up)
     canonical_key      TEXT,           -- sha1(artist|||canonical_title): folds cosmetic variants (issue #11)
@@ -271,8 +298,9 @@ CREATE INDEX ON songs USING gin (artist gin_trgm_ops);
 CREATE INDEX ON songs (canonical_key);   -- variant-folding dedupe lookups
 
 CREATE TABLE tag_vocab (
-    id  SERIAL PRIMARY KEY,   -- id == this tag's dimension in the embedding
-    tag TEXT UNIQUE NOT NULL
+    id        SERIAL PRIMARY KEY,       -- row PK only (NOT a vector dimension anymore)
+    tag       TEXT UNIQUE NOT NULL,
+    embedding vector(384)               -- cached MiniLM vector for this tag (encode once, reuse)
 );
 
 CREATE TABLE graph_nodes (
@@ -297,6 +325,23 @@ CREATE TABLE feedback (
     action     TEXT CHECK (action IN ('accept', 'reject')),
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Co-listening graph (algorithm 2.0, Phase 2 data collection). Weighted edges
+-- harvested from every Last.fm getSimilar call (zero extra API calls). NO FK to
+-- songs on purpose — getSimilar targets usually aren't embedded yet, but we still
+-- want their edges so the graph densifies ahead of node2vec training. `source`
+-- marks provenance: 'track_similar' or 'artist_similar'. Append-only, idempotent
+-- on (source_track_id, target_track_id, source).
+CREATE TABLE colisten_edges (
+    id              SERIAL PRIMARY KEY,
+    source_track_id TEXT NOT NULL,
+    target_track_id TEXT NOT NULL,
+    weight          FLOAT,
+    source          TEXT,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+CREATE UNIQUE INDEX ON colisten_edges(source_track_id, target_track_id, source);
+CREATE INDEX ON colisten_edges(source_track_id);
 ```
 
 A row in `songs` can exist with `embedding IS NULL` — that's a search-cache hit
@@ -364,18 +409,20 @@ means "no variant folding" for that song (graceful degradation). Pass
 ```
 POST /songs/repack-vocab
 ```
-Maintenance: re-packs `tag_vocab.id` to be dense (1..N) via a two-step
-`dense_rank()` UPDATE, resets the SERIAL sequence, and NULLs all `songs.embedding`
-values (which are stale under the old id→slot mapping). Idempotent — no-op when
-ids are already dense. Run once on any DB that was built with the old
-`INSERT … ON CONFLICT DO UPDATE` code that burned sequence ids on conflicts.
+Maintenance: re-packs `tag_vocab.id` to be dense (1..N) and NULLs all
+`songs.embedding` values so `/reembed` rebuilds them. **Largely vestigial under
+algorithm 2.0** — `tag_vocab.id` is no longer a vector dimension, so id density no
+longer affects embeddings. It survives mainly as the "null every embedding so they
+get rebuilt" trigger; the meaningful per-tag data now lives in `tag_vocab.embedding`.
 
 ```
 POST /songs/reembed?limit={n}
 ```
-Maintenance: re-embeds up to `n` songs with `embedding IS NULL`, re-fetching
-tags from Last.fm and rebuilding vectors against the current packed vocab. Call
-repeatedly until `remaining` is 0. Always run `/repack-vocab` first.
+Maintenance: re-embeds up to `n` songs with `embedding IS NULL`, re-fetching tags
+from Last.fm and rebuilding the dense 384-dim semantic vector (`build_tag_vector`,
+reusing cached per-tag MiniLM vectors from `tag_vocab.embedding`). Call repeatedly
+until `remaining` is 0 — this is how a DB is migrated onto the algorithm 2.0
+embedding after `_migrate_embedding_to_384()` adds the new (NULL) column.
 
 ### Graph
 
@@ -395,11 +442,12 @@ POST /graph/tags
 body: { "track_ids": ["abc", ...], "top_n": 15 }
 ```
 Dominant tags across a graph (issue #2) — "which genres are taking over". Sums
-each song's normalized tag weights (from its embedding) across the node set and
+each song's blended tag weights (read from `songs.tags`, since the dense averaged
+embedding can't be inverted back to discrete tags) across the node set and
 returns the top `top_n` as `{ tag, weight, count, share }` (`share` ≈ % of the
 vibe). Pass `track_ids` to scope to the UI's current node set; omit it to
 aggregate the whole persisted graph (nodes + both ends of every edge). Empty set
-or no embeddings → `{ "tags": [] }`.
+or no stored tags → `{ "tags": [] }`.
 
 ```
 POST /graph/seed
@@ -481,11 +529,18 @@ discover/
 │   │
 │   └── services/
 │       ├── lastfm.py         # Last.fm API + blend_tags
-│       ├── embeddings.py     # track_id, tag vocab, vector build, cosine, MMR, ann_search
+│       ├── embeddings.py     # track_id, build_tag_vector (count-weighted avg), cosine, MMR, ann_search
+│       ├── tag_encoder.py    # all-MiniLM-L6-v2 tag→384-dim encoder (fastembed), cached in tag_vocab.embedding
 │       ├── steering.py       # reject vector math
 │       ├── ingest.py         # embed_and_store_track — the one tag→vector pipeline, called everywhere
+│       ├── colisten.py       # co-listening edge collection (Phase 2 data, append-only)
+│       ├── blacklist.py      # never-recommend artist filtering (BLACKLIST_ARTISTS + per-request)
+│       ├── spotify.py        # "listen on Spotify" link (client-credentials search)
 │       └── covers.py         # Deezer/iTunes cover resolution
 │
+├── jobs/
+│   └── crawl_colisten.py     # offline co-listening graph crawl (algorithm 2.0, Phase 2)
+├── eval/                     # offline eval harness (recall@k, MRR, diversity, listener health)
 └── frontend/                 # React + Vite + ReactFlow graph UI
 ```
 
@@ -497,10 +552,14 @@ discover/
 STEERING_ALPHA      = 0.3      # reject steering strength
 MAX_LISTENERS       = 500000   # underground ceiling
 DEFAULT_K           = 10       # default neighbors per query
-EMBEDDING_DIM       = 300      # pgvector dimension
+EMBEDDING_DIM       = 384      # live songs.embedding dim (Phase 2 widens to 384+128=512)
+TAG_EMBEDDING_DIM   = 384      # semantic tag half (all-MiniLM-L6-v2 output)
+LEGACY_EMBEDDING_DIM = 300     # old sparse vector, kept as embedding_legacy_300 for rollback
+TAG_ENCODER_MODEL   = "sentence-transformers/all-MiniLM-L6-v2"  # fastembed ONNX, CPU, no torch
 MMR_LAMBDA          = 0.7      # relevance vs diversity (1.0 = pure relevance)
 MMR_POOL_MULTIPLIER = 3        # over-fetch k × this before re-ranking
 MMR_MAX_PER_ARTIST  = 2        # per-artist cap in the candidate pool
+BLACKLIST_ARTISTS   = [...]    # parsed from env CSV — never-recommend list (credit-aware)
 ```
 
 ### Environment variables
@@ -510,6 +569,7 @@ LASTFM_API_KEY=
 LASTFM_SHARED_SECRET=          # present in .env.example; not currently required
 SPOTIFY_CLIENT_ID=             # optional — only for the "listen on Spotify" link
 SPOTIFY_CLIENT_SECRET=         # optional — only for the "listen on Spotify" link
+BLACKLIST_ARTISTS=             # optional CSV — artists never recommended (e.g. "Drake, ...")
 DATABASE_URL=postgresql://user:password@localhost:5432/music_db
 ```
 
@@ -576,5 +636,12 @@ The **frontend** is built with Vite and published to **GitHub Pages** (live at
   call these instead of repeating the Last.fm pipeline or the `embedding <=>`
   SQL. If you need a slightly different query/pipeline, extend the helper rather
   than copying it back into a router.
-- Embedding dimension is fixed at 300; tags beyond vocab slot 300 are silently
-  dropped. Bump `EMBEDDING_DIM` (and the `vector(...)` column) if the vocab outgrows it.
+- **Tag encoding is cached, per unique tag, in `tag_vocab.embedding`.** Never encode
+  per song — the same tags recur across thousands of songs, so `tag_encoder` encodes
+  each once and reuses it. The whole backfill is only fast because of that cache.
+- **Embedding dimension is `384` (`all-MiniLM-L6-v2`).** Unlike the old slot model,
+  tags are no longer dropped at a vocab cutoff — every tag contributes to the
+  count-weighted average. Phase 2 widens the stored vector to `512` by concatenating
+  a 128-dim co-listening embedding; if you change the model/dim, update
+  `EMBEDDING_DIM`, `TAG_EMBEDDING_DIM`, the `vector(...)` columns, and re-run
+  `/reembed`. See `NEW_ALGORITHM_IMPLEMENTATION.md` for the full Phase 0–2 plan.

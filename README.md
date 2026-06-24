@@ -24,6 +24,8 @@ Every song gets turned into a vector, which is built with the following info fro
 | Artist tags | the artist's broader sound | `0.3` |
 | Similar-artist tags | the surrounding scene | `0.1 × match` |
 
+Each of those tags is encoded into a shared semantic space with a small sentence-transformer model (`all-MiniLM-L6-v2`), and a song's vector is the count-weighted average of its tag vectors. The upshot: related tags like "hip hop" and "rap" sit close together, so songs end up near each other when they *sound* alike — not just when they share the exact same tag spelling.
+
 This means that finding "songs like this one" is just a nearest neighbour search. Which is cool and all but pyo offers more than just that, we offer:
 
 - **Steering**: reject a song and future suggestions actively lean *away* from it.
@@ -57,7 +59,7 @@ The **Graph Info** panel sums the tag weights across every node on screen and te
 | API | FastAPI (Python, async) |
 | Search + tags + listeners | Last.fm |
 | Album covers | Deezer → iTunes → Deezer artist photo |
-| Embeddings | numpy over blended Last.fm tags |
+| Embeddings | all-MiniLM-L6-v2 (fastembed, ONNX/CPU) over blended Last.fm tags |
 | Vector DB + graph state | Postgres + pgvector |
 | Frontend | React + Vite + ReactFlow |
 

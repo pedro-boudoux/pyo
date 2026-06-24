@@ -15,6 +15,12 @@ Visual reference for how the Underground Music Discovery backend actually works
 > - Extra machinery beyond the original plan: **blended tags**, **MMR re-ranking**,
 >   **reject steering**, **linear & tree playlists**, **recursive seed expansion**,
 >   and **dominant-tag aggregation** (`POST /graph/tags`, issue #2).
+> - **Embeddings are dense semantic vectors now (algorithm 2.0, Phase 1).** Each
+>   Last.fm tag is encoded with `all-MiniLM-L6-v2` (`fastembed`, ONNX/CPU) and a
+>   track's `vector(384)` is the count-weighted average of its tag vectors. This
+>   replaced the old sparse `vector(300)` slot model (kept per row as
+>   `embedding_legacy_300` for rollback). Phase 2 collects co-listening edges
+>   (`colisten_edges`) toward a future 512-dim hybrid — see `NEW_ALGORITHM_IMPLEMENTATION.md`.
 
 ## Two shared building blocks
 
@@ -51,8 +57,11 @@ graph TB
     subgraph svc["Services (app/services)"]
         S_lastfm["lastfm.py"]
         S_emb["embeddings.py"]
+        S_tagenc["tag_encoder.py (MiniLM)"]
         S_steer["steering.py"]
         S_ingest["ingest.py"]
+        S_colisten["colisten.py"]
+        S_blacklist["blacklist.py"]
         S_covers["covers.py"]
         S_spotify["spotify.py"]
     end
@@ -63,6 +72,7 @@ graph TB
         T_nodes[("graph_nodes")]
         T_edges[("graph_edges")]
         T_fb[("feedback")]
+        T_colisten[("colisten_edges")]
     end
 
     subgraph ext["External APIs"]
@@ -101,15 +111,18 @@ erDiagram
         text name
         text artist
         int listeners "underground filter"
-        vector embedding "vector(300)"
+        vector embedding "vector(384) dense semantic tag vector (algo 2.0)"
+        vector embedding_legacy_300 "old sparse slot vector (rollback)"
+        jsonb tags "raw blended {tag: count} (dominant_tags / features read this)"
         text image "cover URL"
         text canonical_key "sha1(artist|||canonical_title): folds variants, indexed (issue #11)"
         text spotify_url "cached open.spotify.com link (NULL = none)"
         timestamptz spotify_checked_at "when resolved (NULL = never)"
     }
     tag_vocab {
-        serial id PK "= vector dimension index"
+        serial id PK "row PK only (no longer a vector dimension)"
         text tag UK "cleaned, lowercased"
+        vector embedding "cached MiniLM vector(384) for this tag"
     }
     graph_nodes {
         serial id PK
@@ -127,21 +140,29 @@ erDiagram
         text track_id FK
         text action "accept | reject"
     }
+    colisten_edges {
+        serial id PK
+        text source_track_id "no FK — targets often unembedded"
+        text target_track_id
+        float weight
+        text source "track_similar | artist_similar"
+    }
 
     songs ||--o| graph_nodes : "appears as"
     songs ||--o{ graph_edges : "source_id"
     songs ||--o{ graph_edges : "target_id"
     songs ||--o{ feedback : "rated in"
-    tag_vocab ||..|| songs : "index → embedding slot"
+    tag_vocab ||..|| songs : "tag vectors averaged → songs.embedding"
 ```
 
 ---
 
 ## 3. Embedding pipeline (tags → vector) — `ingest.embed_and_store_track`
 
-How any `(artist, track)` becomes a stored `vector(300)`. This *is*
-`ingest.embed_and_store_track` — the single shared block every other flow calls
-when it needs an embedding (`services/ingest.py`, `services/embeddings.py`,
+How any `(artist, track)` becomes a stored dense `vector(384)` semantic embedding
+(algorithm 2.0, Phase 1). This *is* `ingest.embed_and_store_track` — the single
+shared block every other flow calls when it needs an embedding
+(`services/ingest.py`, `services/embeddings.py`, `services/tag_encoder.py`,
 `lastfm.blend_tags`). A cache hit short-circuits before any Last.fm call.
 
 ```mermaid
@@ -158,10 +179,10 @@ flowchart TD
     end
 
     tags --> blend["blend_tags()<br/>merge into one {tag: count} dict<br/>drop count ≤ 0"]
-    blend --> vocab["get_or_create_tag_ids()<br/>upsert tags into tag_vocab"]
-    vocab --> build["build_tag_vector()<br/>count / max_count → slot at vocab.id"]
-    build --> norm["dense float[300]<br/>top tag = 1.0"]
-    norm --> store[("UPSERT into songs<br/>(embedding, listeners, image)")]
+    blend --> enc["tag_encoder.get_tag_embeddings()<br/>each tag → 384-dim MiniLM vector<br/>cached per tag in tag_vocab.embedding"]
+    enc --> build["build_tag_vector()<br/>Σ count·tag_vec → L2-normalize"]
+    build --> norm["dense vector(384)<br/>(all-zero if no usable tags)"]
+    norm --> store[("UPSERT into songs<br/>(embedding, tags jsonb, listeners, image)")]
     cover["covers.get_cover_url<br/>Deezer → iTunes → artist photo"] --> store
 ```
 
@@ -259,21 +280,21 @@ flowchart TD
 
 ## 5a. Dominant tags across a graph (`POST /graph/tags`, issue #2)
 
-"Which genres are taking over." Sums each song's *normalized* tag weights (read
-straight from the stored embeddings) across a node set and returns the top
-`top_n` as `{ tag, weight, count, share }` (`embeddings.dominant_tags`). Pass
-`track_ids` to scope to exactly what the UI is showing; omit it to aggregate the
-whole persisted graph.
+"Which genres are taking over." Sums each song's blended tag weights (read from the
+`songs.tags` jsonb — the dense averaged embedding can't be inverted back to discrete
+tags) across a node set and returns the top `top_n` as `{ tag, weight, count, share }`
+(`embeddings.dominant_tags`). Pass `track_ids` to scope to exactly what the UI is
+showing; omit it to aggregate the whole persisted graph.
 
 ```mermaid
 flowchart TD
     req(["POST /graph/tags {track_ids?, top_n}"]) --> scope{"track_ids given?"}
-    scope -->|yes| sel1["SELECT embedding WHERE track_id = ANY(...)<br/>AND embedding IS NOT NULL"]
-    scope -->|no| sel2["SELECT embedding for every song that is a<br/>graph_node OR an edge endpoint<br/>(nodes ∪ source ∪ target)"]
-    sel1 --> vocab["load tag_vocab (id → tag)"]
-    sel2 --> vocab
-    vocab --> agg["dominant_tags():<br/>sum normalized weight per vocab slot,<br/>map slot → tag, sort desc, take top_n"]
-    agg --> out(["{tag, weight, count, share}[]<br/>(empty set / no embeddings → [])"])
+    scope -->|yes| sel1["SELECT tags WHERE track_id = ANY(...)<br/>AND tags IS NOT NULL"]
+    scope -->|no| sel2["SELECT tags for every song that is a<br/>graph_node OR an edge endpoint<br/>(nodes ∪ source ∪ target)"]
+    sel1 --> agg
+    sel2 --> agg
+    agg["dominant_tags():<br/>sum {tag: count} weight per tag across songs,<br/>sort desc, take top_n, compute share"]
+    agg --> out(["{tag, weight, count, share}[]<br/>(empty set / no stored tags → [])"])
 ```
 
 ---
