@@ -84,10 +84,14 @@ export function linearPlaylist(
   n: number,
   niche: boolean,
   exclude_ids: string[],
+  exclude_artists: string[] = [],
 ) {
   return request<{ seed_track_id: string; tracks: PlaylistTrack[] }>(
     `/playlists/linear`,
-    { method: "POST", body: JSON.stringify({ track_id, n, niche, exclude_ids }) },
+    {
+      method: "POST",
+      body: JSON.stringify({ track_id, n, niche, exclude_ids, exclude_artists }),
+    },
   );
 }
 
@@ -97,12 +101,13 @@ export function treePlaylist(
   max_depth: number,
   niche: boolean,
   exclude_ids: string[],
+  exclude_artists: string[] = [],
 ) {
   return request<{ seed_track_id: string; tracks: PlaylistTrack[] }>(
     `/playlists/tree`,
     {
       method: "POST",
-      body: JSON.stringify({ track_id, n, max_depth, niche, exclude_ids }),
+      body: JSON.stringify({ track_id, n, max_depth, niche, exclude_ids, exclude_artists }),
     },
   );
 }
@@ -158,6 +163,7 @@ export async function expandFromTrack(
       opts.k,
       opts.niche,
       opts.excludeIds,
+      opts.excludeArtists ?? [],
     );
     return withTags(data.tracks);
   }
@@ -167,6 +173,7 @@ export async function expandFromTrack(
     opts.maxDepth,
     opts.niche,
     opts.excludeIds,
+    opts.excludeArtists ?? [],
   );
   return withTags(data.tracks);
 }
