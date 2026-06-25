@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ExpansionMethod, ExpansionParams } from "../types";
 import { DEFAULT_EXPANSION } from "../types";
 import { getSongFeatures } from "../api";
@@ -87,6 +87,30 @@ export function NodePopover({
     y: Math.min(y, window.innerHeight - 400),
   }));
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Keep the whole card on-screen. The initial clamp above uses a *guessed*
+  // height, but the card is taller than that once the sliders, method blurb and
+  // delete/block confirmations are laid out — so its bottom slipped off-screen
+  // for nodes near the viewport edge (issue #24). Measure the real rendered size
+  // and nudge the card up/left so no edge leaves the viewport. Re-runs whenever
+  // the content changes height (switching method, opening a confirm prompt, tags
+  // or the Spotify line arriving) and on window resize. Only moves when actually
+  // overflowing, so it doesn't fight a manual drag.
+  const clampIntoView = useCallback(() => {
+    const el = cardRef.current;
+    if (mobile || !el) return;
+    const margin = 8;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    setPos((p) => {
+      const maxX = Math.max(margin, window.innerWidth - w - margin);
+      const maxY = Math.max(margin, window.innerHeight - h - margin);
+      const nx = Math.min(Math.max(margin, p.x), maxX);
+      const ny = Math.min(Math.max(margin, p.y), maxY);
+      return nx === p.x && ny === p.y ? p : { x: nx, y: ny };
+    });
+  }, [mobile]);
 
   const onHeaderPointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -239,6 +263,18 @@ export function NodePopover({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [close]);
+
+  // Re-clamp once the real card height is known and after anything that resizes
+  // it, so the popover always opens fully on-screen (issue #24).
+  useLayoutEffect(() => {
+    clampIntoView();
+  }, [clampIntoView, params.method, confirmingDelete, confirmingBlock, tags.length, spotify.status]);
+
+  useEffect(() => {
+    if (mobile) return;
+    window.addEventListener("resize", clampIntoView);
+    return () => window.removeEventListener("resize", clampIntoView);
+  }, [mobile, clampIntoView]);
 
   function update<K extends keyof ExpansionParams>(key: K, value: ExpansionParams[K]) {
     setParams((p) => ({ ...p, [key]: value }));
@@ -509,7 +545,7 @@ export function NodePopover({
       {mobile ? (
         card
       ) : (
-        <div className="fixed z-30" style={{ left: pos.x, top: pos.y }}>
+        <div ref={cardRef} className="fixed z-30" style={{ left: pos.x, top: pos.y }}>
           {card}
         </div>
       )}
