@@ -84,6 +84,9 @@ class LinearPlaylistRequest(BaseModel):
     n: int = 10
     niche: bool = False
     exclude_ids: list[str] = []
+    # Per-request blocked artists (the user's local block list), layered on top of
+    # the mandatory BLACKLIST_ARTISTS — same as /recommendations' exclude_artists (issue #23).
+    exclude_artists: list[str] = []
 
 
 class TreePlaylistRequest(BaseModel):
@@ -92,6 +95,9 @@ class TreePlaylistRequest(BaseModel):
     max_depth: int = 3
     niche: bool = False
     exclude_ids: list[str] = []
+    # Per-request blocked artists (the user's local block list), layered on top of
+    # the mandatory BLACKLIST_ARTISTS — same as /recommendations' exclude_artists (issue #23).
+    exclude_artists: list[str] = []
 
 
 class PlaylistResponse(BaseModel):

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.models import LinearPlaylistRequest, TreePlaylistRequest, PlaylistResponse, PlaylistTrack
 from app.db import get_cursor
-from app.services import ingest, embeddings as emb_service
+from app.services import ingest, embeddings as emb_service, blacklist
 from app.config import MAX_LISTENERS
 
 router = APIRouter(prefix="/playlists", tags=["playlists"])
@@ -36,12 +36,19 @@ def get_neighborhood(cursor, track_id: str) -> set:
     return {row["target_id"] for row in cursor.fetchall()}
 
 
-def find_neighbors(cursor, embedding, exclude_ids, k, niche, allowed_ids=None):
+def find_neighbors(cursor, embedding, exclude_ids, k, niche, allowed_ids=None, blocked_artists=frozenset()):
+    def _allowed(rows):
+        # Mandatory env blacklist ∪ this request's blocked artists. Always applied,
+        # so blocked artists never appear in Tree/Linear playlists either (issue #23).
+        return [r for r in rows if not blacklist.is_blocked(r["artist"], blocked_artists)]
+
     if not niche:
-        return emb_service.ann_search(
+        # Over-fetch so dropping blocked artists doesn't shrink the result below k.
+        rows = emb_service.ann_search(
             embedding, exclude_ids=exclude_ids,
-            allowed_ids=allowed_ids, limit=k, cursor=cursor,
+            allowed_ids=allowed_ids, limit=k * 3, cursor=cursor,
         )
+        return _allowed(rows)[:k]
 
     collected = []
     excluded = set(exclude_ids)
@@ -51,11 +58,15 @@ def find_neighbors(cursor, embedding, exclude_ids, k, niche, allowed_ids=None):
             break
         results = emb_service.ann_search(
             embedding, listeners_cap=threshold, exclude_ids=excluded,
-            allowed_ids=allowed_ids, limit=k - len(collected), cursor=cursor,
+            allowed_ids=allowed_ids, limit=(k - len(collected)) * 3, cursor=cursor,
         )
         for r in results:
-            collected.append(r)
+            if len(collected) >= k:
+                break
             excluded.add(r["track_id"])
+            if blacklist.is_blocked(r["artist"], blocked_artists):
+                continue
+            collected.append(r)
 
     return sorted(collected, key=lambda x: x["listeners"] or 0)
 
@@ -126,13 +137,15 @@ def linear_playlist(request: LinearPlaylistRequest):
         neighborhood = get_neighborhood(cursor, request.track_id)
 
     embed_missing(neighborhood)
+    blocked_artists = blacklist.normalize(request.exclude_artists)
 
     with get_cursor() as cursor:
         tracks = find_neighbors(
             cursor, seed_embedding,
             {request.track_id, *request.exclude_ids},
             request.n, request.niche,
-            neighborhood if neighborhood else None
+            neighborhood if neighborhood else None,
+            blocked_artists,
         )
 
     return PlaylistResponse(
@@ -156,6 +169,7 @@ def tree_playlist(request: TreePlaylistRequest):
         allowed = get_neighborhood(cursor, request.track_id)
 
     embed_missing(allowed)
+    blocked_artists = blacklist.normalize(request.exclude_artists)
 
     with get_cursor() as cursor:
         # allowed set starts as the seed's direct neighbors and grows as we visit nodes
@@ -175,7 +189,8 @@ def tree_playlist(request: TreePlaylistRequest):
 
             neighbors = find_neighbors(
                 cursor, embedding, seen, 2, request.niche,
-                current_allowed if current_allowed else None
+                current_allowed if current_allowed else None,
+                blocked_artists,
             )
 
             for neighbor in neighbors:
