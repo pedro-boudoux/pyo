@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Request
 from app.models import RecommendationsResponse, Recommendation
 from app.db import get_cursor
+from app.ratelimit import limiter
 from app.services import steering, lastfm, ingest, embeddings, colisten, blacklist
 from app.services.embeddings import mmr_rerank
-from app.config import DEFAULT_K, MMR_LAMBDA, MMR_POOL_MULTIPLIER, MMR_MAX_PER_ARTIST
+from app.config import DEFAULT_K, MMR_LAMBDA, MMR_POOL_MULTIPLIER, MMR_MAX_PER_ARTIST, RATE_LIMIT_HEAVY
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -86,7 +87,9 @@ def topup_from_lastfm(seed_track_id: str, query_embedding: list, exclude_ids: se
 
 
 @router.get("/{track_id}", response_model=RecommendationsResponse)
+@limiter.limit(RATE_LIMIT_HEAVY)
 def get_recommendations(
+    request: Request,
     track_id: str,
     k: int = Query(default=DEFAULT_K, ge=1, le=50),
     lambda_param: float = Query(default=MMR_LAMBDA, ge=0.0, le=1.0, alias="lambda"),

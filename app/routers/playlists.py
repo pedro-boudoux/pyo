@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from app.models import LinearPlaylistRequest, TreePlaylistRequest, PlaylistResponse, PlaylistTrack
 from app.db import get_cursor
+from app.ratelimit import limiter
 from app.services import ingest, embeddings as emb_service
-from app.config import MAX_LISTENERS
+from app.config import MAX_LISTENERS, RATE_LIMIT_HEAVY
 
 router = APIRouter(prefix="/playlists", tags=["playlists"])
 
@@ -112,48 +113,50 @@ def to_playlist_tracks(rows: list[dict]) -> list[PlaylistTrack]:
 
 
 @router.post("/linear", response_model=PlaylistResponse)
-def linear_playlist(request: LinearPlaylistRequest):
+@limiter.limit(RATE_LIMIT_HEAVY)
+def linear_playlist(request: Request, body: LinearPlaylistRequest):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT embedding FROM songs WHERE track_id = %s",
-            (request.track_id,)
+            (body.track_id,)
         )
         row = cursor.fetchone()
         if not row or row["embedding"] is None:
             raise HTTPException(404, "Track not found or not yet embedded — seed it first")
 
         seed_embedding = [float(x) for x in row["embedding"]]
-        neighborhood = get_neighborhood(cursor, request.track_id)
+        neighborhood = get_neighborhood(cursor, body.track_id)
 
     embed_missing(neighborhood)
 
     with get_cursor() as cursor:
         tracks = find_neighbors(
             cursor, seed_embedding,
-            {request.track_id, *request.exclude_ids},
-            request.n, request.niche,
+            {body.track_id, *body.exclude_ids},
+            body.n, body.niche,
             neighborhood if neighborhood else None
         )
 
     return PlaylistResponse(
-        seed_track_id=request.track_id,
+        seed_track_id=body.track_id,
         tracks=to_playlist_tracks(dedupe_by_canonical(tracks))
     )
 
 
 @router.post("/tree", response_model=PlaylistResponse)
-def tree_playlist(request: TreePlaylistRequest):
+@limiter.limit(RATE_LIMIT_HEAVY)
+def tree_playlist(request: Request, body: TreePlaylistRequest):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT embedding FROM songs WHERE track_id = %s",
-            (request.track_id,)
+            (body.track_id,)
         )
         row = cursor.fetchone()
         if not row or row["embedding"] is None:
             raise HTTPException(404, "Track not found or not yet embedded — seed it first")
 
         seed_embedding = [float(x) for x in row["embedding"]]
-        allowed = get_neighborhood(cursor, request.track_id)
+        allowed = get_neighborhood(cursor, body.track_id)
 
     embed_missing(allowed)
 
@@ -161,12 +164,12 @@ def tree_playlist(request: TreePlaylistRequest):
         # allowed set starts as the seed's direct neighbors and grows as we visit nodes
 
         playlist = []
-        seen = {request.track_id, *request.exclude_ids}
-        queue = [(request.track_id, seed_embedding, 0)]
+        seen = {body.track_id, *body.exclude_ids}
+        queue = [(body.track_id, seed_embedding, 0)]
 
-        while queue and len(playlist) < request.n:
+        while queue and len(playlist) < body.n:
             track_id, embedding, depth = queue.pop(0)
-            if depth >= request.max_depth:
+            if depth >= body.max_depth:
                 continue
 
             # expand allowed set with this node's own edges if it has any
@@ -174,18 +177,18 @@ def tree_playlist(request: TreePlaylistRequest):
             current_allowed = allowed - seen
 
             neighbors = find_neighbors(
-                cursor, embedding, seen, 2, request.niche,
+                cursor, embedding, seen, 2, body.niche,
                 current_allowed if current_allowed else None
             )
 
             for neighbor in neighbors:
-                if len(playlist) >= request.n:
+                if len(playlist) >= body.n:
                     break
                 playlist.append(neighbor)
                 seen.add(neighbor["track_id"])
                 queue.append((neighbor["track_id"], [float(x) for x in neighbor["embedding"]], depth + 1))
 
     return PlaylistResponse(
-        seed_track_id=request.track_id,
+        seed_track_id=body.track_id,
         tracks=to_playlist_tracks(dedupe_by_canonical(playlist))
     )

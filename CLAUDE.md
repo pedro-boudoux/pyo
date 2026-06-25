@@ -31,6 +31,7 @@ ceiling is `listeners < 500_000` (`MAX_LISTENERS`).
 
 ```
 fastapi
+slowapi            # per-IP rate limiting on the public API (issue #20)
 uvicorn
 requests
 numpy
@@ -560,7 +561,25 @@ MMR_LAMBDA          = 0.7      # relevance vs diversity (1.0 = pure relevance)
 MMR_POOL_MULTIPLIER = 3        # over-fetch k × this before re-ranking
 MMR_MAX_PER_ARTIST  = 2        # per-artist cap in the candidate pool
 BLACKLIST_ARTISTS   = [...]    # parsed from env CSV — never-recommend list (credit-aware)
+RATE_LIMIT_ENABLED  = True     # slowapi per-IP limiting; falsey disables it (tests turn it off)
+RATE_LIMIT_DEFAULT  = "100/minute"  # applied to every route
+RATE_LIMIT_HEAVY    = "20/minute"   # stricter cap on seed/recommendations/playlists/feedback
 ```
+
+### Rate limiting (`app/ratelimit.py`, issue #20)
+
+A single shared slowapi `Limiter` (keyed per client IP — left-most
+`X-Forwarded-For`, falling back to the socket peer) guards the public API.
+`app.main` registers it (`app.state.limiter`, the `RateLimitExceeded` → 429
+handler, and `SlowAPIMiddleware`) so `RATE_LIMIT_DEFAULT` applies to **every**
+route. The endpoints that fan out to Last.fm and run the ONNX embedder
+(`/graph/seed`, `/recommendations/{id}`, `/playlists/*`, `/feedback`) add a
+stricter `@limiter.limit(RATE_LIMIT_HEAVY)` on top — those handlers take a
+`request: Request` and rename their Pydantic body to `body`, since slowapi
+requires a parameter literally named `request`. `/health` is `@limiter.exempt`
+(uptime pollers). The limiter is disabled when `RATE_LIMIT_ENABLED` is falsey;
+the test suite sets that in `conftest.py` and `test_ratelimit.py` builds its own
+enabled limiter to exercise the 429 path.
 
 ### Environment variables
 
@@ -570,6 +589,9 @@ LASTFM_SHARED_SECRET=          # present in .env.example; not currently required
 SPOTIFY_CLIENT_ID=             # optional — only for the "listen on Spotify" link
 SPOTIFY_CLIENT_SECRET=         # optional — only for the "listen on Spotify" link
 BLACKLIST_ARTISTS=             # optional CSV — artists never recommended (e.g. "Drake, ...")
+RATE_LIMIT_ENABLED=true        # optional — false/0/no/off disables per-IP rate limiting
+RATE_LIMIT_DEFAULT=100/minute  # optional — global per-IP limit on every route
+RATE_LIMIT_HEAVY=20/minute     # optional — stricter limit on seed/recs/playlists/feedback
 DATABASE_URL=postgresql://user:password@localhost:5432/music_db
 ```
 

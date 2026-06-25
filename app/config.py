@@ -29,6 +29,18 @@ STEERING_ALPHA = 0.3
 MAX_LISTENERS = 500000
 DEFAULT_K = 10
 
+# Rate limiting (slowapi). Per-client-IP limits guard the public deployment from
+# abuse / runaway cost before release (issue #20). Two tiers:
+#   RATE_LIMIT_DEFAULT — applied to every route (cheap reads like search/status).
+#   RATE_LIMIT_HEAVY   — stricter cap on the endpoints that fan out to Last.fm and
+#                        run the ONNX embedder (seed, recommendations, playlists,
+#                        feedback), since each call is many upstream requests.
+# All tunable via env; the limiter is disabled outright when RATE_LIMIT_ENABLED is
+# falsey (the test suite turns it off so fixtures aren't throttled).
+RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").strip().lower() not in ("false", "0", "no", "off")
+RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "100/minute")
+RATE_LIMIT_HEAVY = os.getenv("RATE_LIMIT_HEAVY", "20/minute")
+
 # Embedding dimensions (algorithm 2.0).
 #   EMBEDDING_DIM        — the live stored `songs.embedding` vector. Phase 1 = the
 #                          dense semantic tag vector (384). Phase 2 widens this to
