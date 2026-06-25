@@ -29,6 +29,34 @@ type Vec = { x: number; y: number };
 const ARC_RADIUS = 260;
 const STAGGER_MS = 55;
 
+// The toast shown after an expansion (issue #27). `shown` is how many songs
+// actually made it onto the graph (after the min-similarity filter), `fetched`
+// is how many the backend returned before filtering, and `params` carries the
+// requested count `k` and the `minSimilarity` threshold.
+function expandNotice(
+  shown: number,
+  fetched: number,
+  params: ExpansionParams,
+): string {
+  const songs = (n: number) => `${n} song${n === 1 ? "" : "s"}`;
+
+  if (shown === 0) {
+    // Distinguish "nothing came back" from "everything was filtered out" — the
+    // user's fix differs (try another node vs. lower the similarity threshold).
+    if (fetched > 0) {
+      const pct = Math.round(params.minSimilarity * 100);
+      return `None of the ${songs(fetched)} we found cleared your ${pct}% similarity filter — try lowering it.`;
+    }
+    return "We couldn't find any songs that suit that search.";
+  }
+
+  if (shown < params.k) {
+    return `Found ${songs(shown)} — fewer than the ${params.k} you asked for. This corner of the map is a little sparse.`;
+  }
+
+  return `Found ${songs(shown)}.`;
+}
+
 function arcAround(count: number, parentPos: Vec): Vec[] {
   const arcStart = -Math.PI * 0.85;
   const arcEnd = Math.PI * 0.85;
@@ -272,6 +300,7 @@ export default function App() {
       if (!popover) return;
       setLoading(true);
       setError(null);
+      setNotice(null);
       try {
         const parentId = popover.nodeId;
         const knownIds = Array.from(simNodesRef.current.keys());
@@ -285,6 +314,13 @@ export default function App() {
           params.minSimilarity > 0
             ? fetched.filter((c) => c.similarity >= params.minSimilarity)
             : fetched;
+
+        // Tell the user how the expansion went (issue #27): nothing at all, a
+        // short haul (fewer than the k they asked for), or the full count. The
+        // "nothing" case distinguishes a genuinely empty neighborhood from
+        // results that all fell under the min-similarity filter, since the fix
+        // for the latter (lower the threshold) is different.
+        setNotice(expandNotice(children.length, fetched.length, params));
 
         const parentSim = simNodesRef.current.get(parentId);
         const parentPos: Vec = { x: parentSim?.x ?? 0, y: parentSim?.y ?? 0 };
