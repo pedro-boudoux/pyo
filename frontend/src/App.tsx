@@ -28,6 +28,8 @@ type Vec = { x: number; y: number };
 
 const ARC_RADIUS = 260;
 const STAGGER_MS = 55;
+// How long a transient notice toast stays up before auto-dismissing (issue #27).
+const NOTICE_TIMEOUT_MS = 6000;
 
 // The toast shown after an expansion (issue #27). `shown` is how many songs
 // actually made it onto the graph (after the min-similarity filter), `fetched`
@@ -123,6 +125,15 @@ export default function App() {
   // but turned up zero underground neighbours. Rendered as a neutral toast, not
   // red — the seed node still appears, this just explains the lone node.
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Auto-dismiss the notice after a few seconds so transient toasts (e.g. the
+  // expansion result count — issue #27) clear themselves; it can still be closed
+  // by hand. Each new notice resets the timer.
+  useEffect(() => {
+    if (!notice) return;
+    const id = setTimeout(() => setNotice(null), NOTICE_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [notice]);
 
   const graphRef = useRef<GraphHandle>(null);
   const isMobile = useIsMobile();
@@ -468,6 +479,8 @@ export default function App() {
             onNodeDragStop={handleNodeDragStop}
             onSeed={handleSeed}
             seedingPhase={seedingPhase}
+            notice={notice}
+            onDismissNotice={() => setNotice(null)}
             trackIds={nodes.map((n) => n.id)}
             edgeCount={edges.length}
             graphRef={graphRef}
@@ -537,19 +550,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Informational notice (e.g. no recommendations) — neutral, not red, and
-          stacked above the error slot so both can coexist. */}
-      {notice && (
-        <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-40 max-w-[22rem] overflow-hidden rounded-xl shadow-[0px_1px_4.1px_0px_rgba(0,0,0,0.25)]">
-          <div aria-hidden className="absolute inset-0 backdrop-blur-[4px] bg-white/90 rounded-xl pointer-events-none" />
-          <div className="relative px-4 py-2 text-sm text-black/70 flex items-start gap-3">
-            <span>{notice}</span>
-            <button onClick={() => setNotice(null)} className="shrink-0 text-black/30 hover:text-black/60 transition-colors">
-              ×
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
