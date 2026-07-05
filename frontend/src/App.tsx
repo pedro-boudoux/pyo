@@ -28,6 +28,36 @@ type Vec = { x: number; y: number };
 
 const ARC_RADIUS = 260;
 const STAGGER_MS = 55;
+// How long a transient notice toast stays up before auto-dismissing (issue #27).
+const NOTICE_TIMEOUT_MS = 6000;
+
+// The toast shown after an expansion (issue #27). `shown` is how many songs
+// actually made it onto the graph (after the min-similarity filter), `fetched`
+// is how many the backend returned before filtering, and `params` carries the
+// requested count `k` and the `minSimilarity` threshold.
+function expandNotice(
+  shown: number,
+  fetched: number,
+  params: ExpansionParams,
+): string {
+  const songs = (n: number) => `${n} song${n === 1 ? "" : "s"}`;
+
+  if (shown === 0) {
+    // Distinguish "nothing came back" from "everything was filtered out" — the
+    // user's fix differs (try another node vs. lower the similarity threshold).
+    if (fetched > 0) {
+      const pct = Math.round(params.minSimilarity * 100);
+      return `None of the ${songs(fetched)} we found cleared your ${pct}% similarity filter — try lowering it.`;
+    }
+    return "We couldn't find any songs that suit that search.";
+  }
+
+  if (shown < params.k) {
+    return `Found ${songs(shown)} — fewer than the ${params.k} you asked for. This corner of the map is a little sparse.`;
+  }
+
+  return `Found ${songs(shown)}.`;
+}
 
 function arcAround(count: number, parentPos: Vec): Vec[] {
   const arcStart = -Math.PI * 0.85;
@@ -95,6 +125,15 @@ export default function App() {
   // but turned up zero underground neighbours. Rendered as a neutral toast, not
   // red — the seed node still appears, this just explains the lone node.
   const [notice, setNotice] = useState<string | null>(null);
+
+  // Auto-dismiss the notice after a few seconds so transient toasts (e.g. the
+  // expansion result count — issue #27) clear themselves; it can still be closed
+  // by hand. Each new notice resets the timer.
+  useEffect(() => {
+    if (!notice) return;
+    const id = setTimeout(() => setNotice(null), NOTICE_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [notice]);
 
   const graphRef = useRef<GraphHandle>(null);
   const isMobile = useIsMobile();
@@ -272,6 +311,7 @@ export default function App() {
       if (!popover) return;
       setLoading(true);
       setError(null);
+      setNotice(null);
       try {
         const parentId = popover.nodeId;
         const knownIds = Array.from(simNodesRef.current.keys());
@@ -285,6 +325,13 @@ export default function App() {
           params.minSimilarity > 0
             ? fetched.filter((c) => c.similarity >= params.minSimilarity)
             : fetched;
+
+        // Tell the user how the expansion went (issue #27): nothing at all, a
+        // short haul (fewer than the k they asked for), or the full count. The
+        // "nothing" case distinguishes a genuinely empty neighborhood from
+        // results that all fell under the min-similarity filter, since the fix
+        // for the latter (lower the threshold) is different.
+        setNotice(expandNotice(children.length, fetched.length, params));
 
         const parentSim = simNodesRef.current.get(parentId);
         const parentPos: Vec = { x: parentSim?.x ?? 0, y: parentSim?.y ?? 0 };
@@ -432,6 +479,8 @@ export default function App() {
             onNodeDragStop={handleNodeDragStop}
             onSeed={handleSeed}
             seedingPhase={seedingPhase}
+            notice={notice}
+            onDismissNotice={() => setNotice(null)}
             trackIds={nodes.map((n) => n.id)}
             edgeCount={edges.length}
             graphRef={graphRef}
@@ -501,19 +550,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Informational notice (e.g. no recommendations) — neutral, not red, and
-          stacked above the error slot so both can coexist. */}
-      {notice && (
-        <div className="absolute bottom-40 left-1/2 -translate-x-1/2 z-40 max-w-[22rem] overflow-hidden rounded-xl shadow-[0px_1px_4.1px_0px_rgba(0,0,0,0.25)]">
-          <div aria-hidden className="absolute inset-0 backdrop-blur-[4px] bg-white/90 rounded-xl pointer-events-none" />
-          <div className="relative px-4 py-2 text-sm text-black/70 flex items-start gap-3">
-            <span>{notice}</span>
-            <button onClick={() => setNotice(null)} className="shrink-0 text-black/30 hover:text-black/60 transition-colors">
-              ×
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

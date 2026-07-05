@@ -110,6 +110,19 @@ html, body, #root {
 .popover-in  { animation: popover-in 220ms var(--ease-out) both; }
 .popover-out { animation: popover-out 150ms var(--ease-in-out) both; }
 
+/* Notice toast slide in/out — anchored above the search bar (issue #27). It
+   rises into place and, on dismiss/auto-dismiss, drops back down as it fades. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+.toast-in  { animation: toast-in 260ms var(--ease-out) both; }
+.toast-out { animation: toast-out 200ms var(--ease-in-out) both; }
+
 /* The mobile node-sheet slides via inline transform/transition in NodePopover
    (so the grab handle can be dragged), not a keyframe — see useHandle* there. */
 
@@ -173,6 +186,7 @@ input:focus-visible {
   }
   .fade-up { animation: none; }
   .popover-in, .popover-out { animation: none; }
+  .toast-in, .toast-out { animation: none; }
   .scroll-bob { animation: none; }
   .grid-pan { animation: none; }
 }
