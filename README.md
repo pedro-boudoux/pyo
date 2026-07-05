@@ -16,7 +16,7 @@ Try it out at: [pedro-boudoux.github.io/pyo](https://pedro-boudoux.github.io/pyo
 
 ## How it actually works
 
-Every song gets turned into a vector, which is built with the following info from Last.fm:
+Every song gets turned into a vector, and that vector is built from a blended set of Last.fm tags:
 
 | Layer | What it captures | Weight |
 |---|---|---|
@@ -24,17 +24,20 @@ Every song gets turned into a vector, which is built with the following info fro
 | Artist tags | the artist's broader sound | `0.3` |
 | Similar-artist tags | the surrounding scene | `0.1 × match` |
 
-Each of those tags is encoded into a shared semantic space with a small sentence-transformer model (`all-MiniLM-L6-v2`), and a song's vector is the count-weighted average of its tag vectors. The upshot: related tags like "hip hop" and "rap" sit close together, so songs end up near each other when they *sound* alike — not just when they share the exact same tag spelling.
+Each of those tags is encoded into a shared semantic space with a small sentence-transformer model (`all-MiniLM-L6-v2`), and a song's vector is the count-weighted average of its tag vectors. Thus related tags like "hip hop" and "rap" sit close together, so songs end up near each other when they *sound* alike.
 
-This means that finding "songs like this one" is just a nearest neighbour search. Which is cool and all but pyo offers more than just that, we offer:
+Track identity is also a bit stricter than it used to be. The backend still stores the exact song you searched for, but it also computes a looser canonical key so cosmetic variants like clean / explicit / remastered versions collapse together instead of clogging the top of the recs with the same recording three times.
 
-- **Steering**: reject a song and future suggestions actively lean *away* from it.
-- **Diversity (MMR)**: re-ranks results to balance "close" against "not all the same."
-- **Per-artist caps**: no single artist is allowed to flood the recommendation pool (however depending on how you play with pyo's settings, this might still happen-- completely up to you though 🙏🏼)
-- **Cold-start mining**: obscure seeds with no direct matches fall back to digging
-  through similar *artists'* top tracks, so even the nichest seed gives you *something*.
+So yes, finding "songs like this one" does start as a nearest-neighbour search. But the actual recommendation loop does more than that:
 
-The result is a graph that branches the way taste actually branches.
+- **Steering**: reject a song and future suggestions lean *away* from it by querying with `seed − α·rejected`.
+- **Over-fetch + MMR**: pyo pulls a bigger candidate pool than it needs, then re-ranks it to balance "close" against "not all the same."
+- **Last.fm top-up**: if the local vector search still comes up short, pyo fetches the seed's `getSimilar` tracks, embeds them, scores them against the same query, and fills the gap that way.
+- **Cold-start fallback**: if a seed basically has no usable `track.getSimilar` at all, pyo falls back to similar *artists'* top tracks so even the nichest seed gives you *something*.
+
+Seeding the graph also does more than a one-shot recommendation query. When you drop in a seed, pyo merges local ANN results with Last.fm similar tracks, then recursively expands from the top few candidates so the local neighborhood gets thick enough to branch into playlists without immediately drifting off somewhere random.
+
+The result is a graph that branches the way taste actually branches, not just a flat "more like this" list.
 
 <p align="center">
   <img src="images/tiffany-day.png" alt="A pyo graph grown from a pop seed — album covers connected by edges, with a Graph Info panel showing dominant tags like Electropop, Electronic, Dance-Pop and Indie." width="100%">
@@ -57,7 +60,8 @@ The **Graph Info** panel sums the tag weights across every node on screen and te
 | Layer | Tool |
 |---|---|
 | API | FastAPI (Python, async) |
-| Search + tags + listeners | Last.fm |
+| Search | Last.fm `track.search` + local Postgres cache |
+| Tags + listeners + similar tracks | Last.fm |
 | Album covers | Deezer → iTunes → Deezer artist photo |
 | Embeddings | all-MiniLM-L6-v2 (fastembed, ONNX/CPU) over blended Last.fm tags |
 | Vector DB + graph state | Postgres + pgvector |
