@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.middleware import SlowAPIMiddleware
-from app.db import init_db
+from app import db
 from app.ratelimit import limiter
 from app.routers import songs, graph, recommendations, feedback, playlists
 
@@ -39,7 +39,7 @@ app.include_router(playlists.router)
 
 @app.on_event("startup")
 def startup():
-    init_db()
+    db.init_db()
 
 
 # Exempt from the global limit: uptime/health checkers poll this frequently and
