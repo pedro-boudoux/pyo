@@ -16,6 +16,14 @@ Tier 2 agents can reuse:
                                   fake_get_cursor([{"id": 1, "tag": "rock"}]))
 """
 
+import os
+
+# Turn the slowapi rate limiter off for the whole suite before app.config is
+# imported, so router tests that fire many requests aren't throttled (issue #20).
+# A dedicated test (test_ratelimit.py) builds its own enabled limiter to verify
+# the 429 path.
+os.environ["RATE_LIMIT_ENABLED"] = "false"
+
 from contextlib import contextmanager
 import pytest
 

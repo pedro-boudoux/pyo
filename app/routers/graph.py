@@ -1,11 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Response
 from app.models import (
     GraphResponse, GraphNode, GraphEdge, SeedRequest,
     GraphTagsRequest, DominantTagsResponse,
 )
 from app.db import get_cursor
+from app.ratelimit import limiter
 from app.services import lastfm, embeddings, ingest, colisten, blacklist
-from app.config import DEFAULT_K
+from app.config import DEFAULT_K, RATE_LIMIT_HEAVY
 
 SEED_SIMILAR_LIMIT = 25
 EXPANSION_DEPTH = 3
@@ -80,11 +81,12 @@ def graph_dominant_tags(request: GraphTagsRequest):
 
 
 @router.post("/seed")
-def add_seed(request: SeedRequest):
+@limiter.limit(RATE_LIMIT_HEAVY)
+def add_seed(request: Request, response: Response, body: SeedRequest):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT name, artist, listeners, embedding FROM songs WHERE track_id = %s",
-            (request.track_id,)
+            (body.track_id,)
         )
         row = cursor.fetchone()
         if not row:
@@ -109,11 +111,11 @@ def add_seed(request: SeedRequest):
             INSERT INTO graph_nodes (track_id, is_seed)
             VALUES (%s, true)
             ON CONFLICT (track_id) DO UPDATE SET is_seed = true
-        """, (request.track_id,))
+        """, (body.track_id,))
 
     candidates = embeddings.ann_search(
         vector,
-        exclude_ids=[request.track_id],
+        exclude_ids=[body.track_id],
         limit=DEFAULT_K,
     )
     # Never let a blocked artist become a graph node / edge.
@@ -121,7 +123,7 @@ def add_seed(request: SeedRequest):
 
     similar = lastfm.get_similar_tracks(artist, name, limit=SEED_SIMILAR_LIMIT)
     colisten.record_edges(artist, name, similar, source="track_similar")
-    seen_ids = {c["track_id"] for c in candidates} | {request.track_id}
+    seen_ids = {c["track_id"] for c in candidates} | {body.track_id}
 
     # Variant dedupe: a clean/explicit/remastered edition of the seed, of an ANN
     # candidate, or of a song already on the graph shares a canonical_key but not
@@ -204,6 +206,6 @@ def add_seed(request: SeedRequest):
                     INSERT INTO graph_edges (source_id, target_id, similarity)
                     VALUES (%s, %s, %s)
                     ON CONFLICT (source_id, target_id) DO UPDATE SET similarity = EXCLUDED.similarity
-                """, (request.track_id, c["track_id"], c["similarity"]))
+                """, (body.track_id, c["track_id"], c["similarity"]))
 
-    return {"track_id": request.track_id, "name": name, "artist": artist}
+    return {"track_id": body.track_id, "name": name, "artist": artist}

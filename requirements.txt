@@ -1,4 +1,5 @@
 fastapi
+slowapi            # per-IP rate limiting on the public API (issue #20)
 uvicorn
 requests
 numpy

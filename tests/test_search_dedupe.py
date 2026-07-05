@@ -30,7 +30,7 @@ def test_explicit_and_clean_variants_collapse(monkeypatch):
         local_tracks=[],
     )
 
-    results = songs.search_songs(q="humble")
+    results = songs.search_songs(request=None, response=None, q="humble")
 
     assert len(results) == 1
     # First (most-popular, Last.fm-ordered) instance wins.
@@ -50,7 +50,7 @@ def test_local_variant_does_not_duplicate_lastfm_hit(monkeypatch):
         ],
     )
 
-    results = songs.search_songs(q="idioteque")
+    results = songs.search_songs(request=None, response=None, q="idioteque")
 
     assert len(results) == 1
     assert results[0].name == "Idioteque"
@@ -67,6 +67,6 @@ def test_live_version_is_kept_separate(monkeypatch):
         local_tracks=[],
     )
 
-    results = songs.search_songs(q="idioteque")
+    results = songs.search_songs(request=None, response=None, q="idioteque")
 
     assert len(results) == 2

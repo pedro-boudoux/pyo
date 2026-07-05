@@ -31,6 +31,7 @@ ceiling is `listeners < 500_000` (`MAX_LISTENERS`).
 
 ```
 fastapi
+slowapi            # per-IP rate limiting on the public API (issue #20)
 uvicorn
 requests
 numpy
@@ -560,7 +561,34 @@ MMR_LAMBDA          = 0.7      # relevance vs diversity (1.0 = pure relevance)
 MMR_POOL_MULTIPLIER = 3        # over-fetch k × this before re-ranking
 MMR_MAX_PER_ARTIST  = 2        # per-artist cap in the candidate pool
 BLACKLIST_ARTISTS   = [...]    # parsed from env CSV — never-recommend list (credit-aware)
+RATE_LIMIT_ENABLED  = True     # slowapi per-IP limiting; falsey disables it (tests turn it off)
+RATE_LIMIT_DEFAULT  = "100/minute"  # applied to every route
+RATE_LIMIT_HEAVY    = "20/minute"   # stricter cap on routes that call upstream APIs/embed
+RATE_LIMIT_MAINTENANCE = "2/minute" # authenticated bulk-maintenance cap
+MAINTENANCE_API_KEY = None     # unset disables public access to maintenance routes
 ```
+
+### Rate limiting (`app/ratelimit.py`, issue #20)
+
+A single shared slowapi `Limiter` (keyed by Railway's validated `X-Real-IP`,
+falling back to the socket peer locally) guards the public API.
+`app.main` registers it (`app.state.limiter`, the `RateLimitExceeded` → 429
+handler, and `SlowAPIMiddleware`) so `RATE_LIMIT_DEFAULT` applies to **every**
+route. The endpoints that fan out to Last.fm and run the ONNX embedder
+(`/songs/search`, `/songs/{id}/features`, `/graph/seed`,
+`/recommendations/{id}`, `/playlists/*`, `/feedback`) add a stricter
+`@limiter.limit(RATE_LIMIT_HEAVY)`. Decorated handlers take both
+`request: Request` and `response: Response`; SlowAPI needs the former to identify
+the client and the latter to attach rate-limit headers to dict/Pydantic
+responses. `/health` is `@limiter.exempt` (uptime pollers). The limiter is
+disabled when `RATE_LIMIT_ENABLED` is falsey; the test suite sets that in
+`conftest.py` and `test_ratelimit.py` builds its own enabled limiter to exercise
+the production header + 429 path.
+
+Bulk maintenance routes (`/songs/reembed`, `/songs/repack-vocab`, and both
+`/songs/backfill-*` routes) use `RATE_LIMIT_MAINTENANCE` and also require
+`X-Maintenance-Key` to match `MAINTENANCE_API_KEY`. They return 503 when no key
+is configured, keeping them disabled on a public deployment by default.
 
 ### Environment variables
 
@@ -570,6 +598,11 @@ LASTFM_SHARED_SECRET=          # present in .env.example; not currently required
 SPOTIFY_CLIENT_ID=             # optional — only for the "listen on Spotify" link
 SPOTIFY_CLIENT_SECRET=         # optional — only for the "listen on Spotify" link
 BLACKLIST_ARTISTS=             # optional CSV — artists never recommended (e.g. "Drake, ...")
+RATE_LIMIT_ENABLED=true        # optional — false/0/no/off disables per-IP rate limiting
+RATE_LIMIT_DEFAULT=100/minute  # optional — global per-IP limit on every route
+RATE_LIMIT_HEAVY=20/minute     # optional — stricter limit on upstream/API-heavy routes
+RATE_LIMIT_MAINTENANCE=2/minute # optional — authenticated bulk-maintenance cap
+MAINTENANCE_API_KEY=           # optional — unset disables maintenance endpoints
 DATABASE_URL=postgresql://user:password@localhost:5432/music_db
 ```
 

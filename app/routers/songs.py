@@ -1,9 +1,12 @@
 from concurrent.futures import ThreadPoolExecutor
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Request, Response
 from app.models import SongSearchResult, TrackFeatures
+from app.ratelimit import limiter
+from app.security import require_maintenance_key
 from app.services import lastfm, ingest, embeddings as emb_service, spotify
 from app.services.covers import get_cover_url, is_broken_image
 from app.db import get_cursor
+from app.config import RATE_LIMIT_HEAVY, RATE_LIMIT_MAINTENANCE
 
 router = APIRouter(prefix="/songs", tags=["songs"])
 
@@ -92,7 +95,12 @@ def _upsert_songs(tracks: list[dict]) -> None:
     /search?q={USER_INPUT}
 """
 @router.get("/search", response_model=list[SongSearchResult])
-def search_songs(q: str = Query(..., min_length=1)):
+@limiter.limit(RATE_LIMIT_HEAVY)
+def search_songs(
+    request: Request,
+    response: Response,
+    q: str = Query(..., min_length=1),
+):
 
     # Local DB lookup + Last.fm search run concurrently.
     # Last.fm failures (5xx, timeout, network) degrade gracefully to local-only.
@@ -181,7 +189,12 @@ def search_songs(q: str = Query(..., min_length=1)):
     drop tags from every embedding.
 """
 @router.post("/repack-vocab")
-def repack_vocab():
+@limiter.limit(RATE_LIMIT_MAINTENANCE)
+def repack_vocab(
+    request: Request,
+    response: Response,
+    _: None = Depends(require_maintenance_key),
+):
     with get_cursor() as cursor:
         cursor.execute("SELECT max(id) AS max_id, count(*) AS cnt FROM tag_vocab")
         row = cursor.fetchone()
@@ -229,7 +242,13 @@ def repack_vocab():
     song makes ~7 sequential calls, so this stays comfortably within the limit.
 """
 @router.post("/reembed")
-def reembed_songs(limit: int = Query(default=50, ge=1, le=500)):
+@limiter.limit(RATE_LIMIT_MAINTENANCE)
+def reembed_songs(
+    request: Request,
+    response: Response,
+    limit: int = Query(default=50, ge=1, le=500),
+    _: None = Depends(require_maintenance_key),
+):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT track_id, name, artist FROM songs WHERE embedding IS NULL LIMIT %s",
@@ -263,7 +282,13 @@ def reembed_songs(limit: int = Query(default=50, ge=1, le=500)):
     URL from the cover service.
 """
 @router.post("/backfill-covers")
-def backfill_covers(limit: int = Query(default=200, ge=1, le=2000)):
+@limiter.limit(RATE_LIMIT_MAINTENANCE)
+def backfill_covers(
+    request: Request,
+    response: Response,
+    limit: int = Query(default=200, ge=1, le=2000),
+    _: None = Depends(require_maintenance_key),
+):
     with get_cursor() as cursor:
         cursor.execute("""
             SELECT track_id, name, artist FROM songs
@@ -303,9 +328,13 @@ def backfill_covers(limit: int = Query(default=200, ge=1, le=2000)):
     rules. With force=true `remaining` always reports 0 (every row is fresh).
 """
 @router.post("/backfill-canonical")
+@limiter.limit(RATE_LIMIT_MAINTENANCE)
 def backfill_canonical(
+    request: Request,
+    response: Response,
     limit: int = Query(default=1000, ge=1, le=20000),
     force: bool = Query(default=False),
+    _: None = Depends(require_maintenance_key),
 ):
     where = "" if force else "WHERE canonical_key IS NULL"
     with get_cursor() as cursor:
@@ -355,7 +384,8 @@ def get_song_status(track_id: str):
     The frontend only renders the link when url is non-null.
 """
 @router.get("/{track_id}/spotify")
-def get_song_spotify_link(track_id: str):
+@limiter.limit(RATE_LIMIT_HEAVY)
+def get_song_spotify_link(request: Request, response: Response, track_id: str):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT name, artist, spotify_url, spotify_checked_at FROM songs WHERE track_id = %s",
@@ -392,7 +422,8 @@ def get_song_spotify_link(track_id: str):
     takes a {track_id} (generated in /search), returns the song with embeddings, tags, etc
 """
 @router.get("/{track_id}/features", response_model=TrackFeatures)
-def get_song_features(track_id: str):
+@limiter.limit(RATE_LIMIT_HEAVY)
+def get_song_features(request: Request, response: Response, track_id: str):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT name, artist, listeners, embedding, tags FROM songs WHERE track_id = %s",
