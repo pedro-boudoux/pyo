@@ -2,6 +2,7 @@ import type { Edge, Node, NodeDragHandler, NodeMouseHandler, OnEdgesChange, OnNo
 import { Graph, type GraphHandle } from "./Graph";
 import { GraphInfo } from "./GraphInfo";
 import { SearchBar } from "./SearchBar";
+import { NoticeToast } from "./NoticeToast";
 import { SeedingStatus } from "./SeedingStatus";
 import { SpotifyExportButton } from "./SpotifyExportButton";
 import type { SongNodeData } from "./SongNode";
@@ -107,23 +108,7 @@ export function GraphView({
       {/* Search bar + seeding status + notices — bottom-center, stacked above
           the search bar exactly like the seeding spinner (issue #27). */}
       <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-10 w-[430px] max-w-[calc(100%-24px)] sm:max-w-[calc(100%-80px)]">
-        {notice && (
-          <div className="mb-2 flex justify-center">
-            <div className="relative overflow-hidden rounded-xl shadow-[0px_1px_4.1px_0px_rgba(0,0,0,0.25)] max-w-full">
-              <div aria-hidden className="absolute inset-0 backdrop-blur-[4px] bg-white/90 rounded-xl pointer-events-none" />
-              <div className="relative px-4 py-2 text-sm text-black/70 flex items-start gap-3">
-                <span>{notice}</span>
-                <button
-                  onClick={onDismissNotice}
-                  className="shrink-0 text-black/30 hover:text-black/60 transition-colors"
-                  aria-label="Dismiss"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <NoticeToast message={notice} onDismiss={onDismissNotice} />
         {seedingPhase && (
           <div className="mb-2 flex justify-center">
             <SeedingStatus phase={seedingPhase} compact />
