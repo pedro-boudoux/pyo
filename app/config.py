@@ -30,16 +30,23 @@ MAX_LISTENERS = 500000
 DEFAULT_K = 10
 
 # Rate limiting (slowapi). Per-client-IP limits guard the public deployment from
-# abuse / runaway cost before release (issue #20). Two tiers:
+# abuse / runaway cost before release (issue #20). Three tiers:
 #   RATE_LIMIT_DEFAULT — applied to every route (cheap reads like search/status).
 #   RATE_LIMIT_HEAVY   — stricter cap on the endpoints that fan out to Last.fm and
 #                        run the ONNX embedder (seed, recommendations, playlists,
-#                        feedback), since each call is many upstream requests.
+#                        feedback, search, features).
+#   RATE_LIMIT_MAINTENANCE — stricter still for authenticated bulk maintenance.
 # All tunable via env; the limiter is disabled outright when RATE_LIMIT_ENABLED is
 # falsey (the test suite turns it off so fixtures aren't throttled).
 RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").strip().lower() not in ("false", "0", "no", "off")
 RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "100/minute")
 RATE_LIMIT_HEAVY = os.getenv("RATE_LIMIT_HEAVY", "20/minute")
+RATE_LIMIT_MAINTENANCE = os.getenv("RATE_LIMIT_MAINTENANCE", "2/minute")
+
+# Public traffic must not be able to invoke bulk database/API maintenance. When
+# unset, maintenance routes are disabled; when set, callers must send the value
+# in X-Maintenance-Key.
+MAINTENANCE_API_KEY = os.getenv("MAINTENANCE_API_KEY")
 
 # Embedding dimensions (algorithm 2.0).
 #   EMBEDDING_DIM        — the live stored `songs.embedding` vector. Phase 1 = the

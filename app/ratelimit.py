@@ -6,6 +6,8 @@ and the routers (stricter per-route limits via `@limiter.limit(RATE_LIMIT_HEAVY)
 import the same instance. The whole thing is a no-op when `RATE_LIMIT_ENABLED` is
 falsey — the test suite turns it off so fixtures aren't throttled.
 """
+from ipaddress import ip_address
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -16,19 +18,17 @@ def client_ip(request) -> str:
     """
     Identify the caller for rate-limit bucketing.
 
-    On Railway the app sits behind a proxy, so the socket peer is the proxy and
-    every client would share one bucket. Prefer the left-most `X-Forwarded-For`
-    entry (the original client) and fall back to the socket address locally.
-
-    Caveat: `X-Forwarded-For` is client-settable, so a determined attacker can
-    rotate it to dodge the limit. That's acceptable here — this is a release-gate
-    guard against casual abuse and runaway upstream cost, not a security control.
+    Railway sets X-Real-IP to the original client address. Do not trust
+    X-Forwarded-For here: callers can supply it themselves and rotate the value
+    to evade a per-IP limit. Invalid/missing Railway headers fall back to the
+    socket peer for local development.
     """
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        first = forwarded.split(",")[0].strip()
-        if first:
-            return first
+    railway_ip = request.headers.get("x-real-ip", "").strip()
+    if railway_ip:
+        try:
+            return str(ip_address(railway_ip))
+        except ValueError:
+            pass
     return get_remote_address(request)
 
 

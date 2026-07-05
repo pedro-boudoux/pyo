@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, HTTPException, Request
+from fastapi import APIRouter, Query, HTTPException, Request, Response
 from app.models import RecommendationsResponse, Recommendation
 from app.db import get_cursor
 from app.ratelimit import limiter
@@ -90,6 +90,7 @@ def topup_from_lastfm(seed_track_id: str, query_embedding: list, exclude_ids: se
 @limiter.limit(RATE_LIMIT_HEAVY)
 def get_recommendations(
     request: Request,
+    response: Response,
     track_id: str,
     k: int = Query(default=DEFAULT_K, ge=1, le=50),
     lambda_param: float = Query(default=MMR_LAMBDA, ge=0.0, le=1.0, alias="lambda"),

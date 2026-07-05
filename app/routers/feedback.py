@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from app.models import FeedbackRequest, FeedbackResponse
 from app.db import get_cursor
 from app.ratelimit import limiter
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/feedback", tags=["feedback"])
 
 @router.post("", response_model=FeedbackResponse)
 @limiter.limit(RATE_LIMIT_HEAVY)
-def submit_feedback(request: Request, body: FeedbackRequest):
+def submit_feedback(request: Request, response: Response, body: FeedbackRequest):
     if body.action not in ("accept", "reject"):
         raise HTTPException(400, "Action must be 'accept' or 'reject'")
 

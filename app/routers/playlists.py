@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from app.models import LinearPlaylistRequest, TreePlaylistRequest, PlaylistResponse, PlaylistTrack
 from app.db import get_cursor
 from app.ratelimit import limiter
@@ -125,7 +125,7 @@ def to_playlist_tracks(rows: list[dict]) -> list[PlaylistTrack]:
 
 @router.post("/linear", response_model=PlaylistResponse)
 @limiter.limit(RATE_LIMIT_HEAVY)
-def linear_playlist(request: Request, body: LinearPlaylistRequest):
+def linear_playlist(request: Request, response: Response, body: LinearPlaylistRequest):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT embedding FROM songs WHERE track_id = %s",
@@ -158,7 +158,7 @@ def linear_playlist(request: Request, body: LinearPlaylistRequest):
 
 @router.post("/tree", response_model=PlaylistResponse)
 @limiter.limit(RATE_LIMIT_HEAVY)
-def tree_playlist(request: Request, body: TreePlaylistRequest):
+def tree_playlist(request: Request, response: Response, body: TreePlaylistRequest):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT embedding FROM songs WHERE track_id = %s",

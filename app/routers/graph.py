@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from app.models import (
     GraphResponse, GraphNode, GraphEdge, SeedRequest,
     GraphTagsRequest, DominantTagsResponse,
@@ -82,7 +82,7 @@ def graph_dominant_tags(request: GraphTagsRequest):
 
 @router.post("/seed")
 @limiter.limit(RATE_LIMIT_HEAVY)
-def add_seed(request: Request, body: SeedRequest):
+def add_seed(request: Request, response: Response, body: SeedRequest):
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT name, artist, listeners, embedding FROM songs WHERE track_id = %s",
