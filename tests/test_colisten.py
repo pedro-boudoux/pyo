@@ -49,6 +49,22 @@ def test_track_similar_uses_each_targets_match(monkeypatch):
     assert rows[1] == (src, make_track_id("Aphex Twin", "Xtal"), 0.4, "track_similar")
 
 
+def test_edge_rows_can_be_batched_without_db():
+    rows = colisten.edge_rows(
+        "Autechre",
+        "Gantz Graf",
+        [{"artist": "Boards of Canada", "name": "Roygbiv", "match": 0.9}],
+        source="track_similar",
+    )
+
+    assert rows == [(
+        make_track_id("Autechre", "Gantz Graf"),
+        make_track_id("Boards of Canada", "Roygbiv"),
+        0.9,
+        "track_similar",
+    )]
+
+
 def test_artist_similar_uses_shared_weight(monkeypatch):
     cursor = RecordingCursor()
     monkeypatch.setattr(colisten, "get_cursor", fake_get_cursor_factory(cursor))

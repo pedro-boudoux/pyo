@@ -22,7 +22,7 @@ hybrid implementation, with measurable gates and no accidental prod writes durin
   - `colisten_edges`: 1422 nodes, 2415 edges, avg degree 3.4
 - Local DB is not valid for the saved baseline eval: it only had 33 / 294 seed IDs.
 
-## Step 1 — Re-run Phase 1 Prod Eval Gate
+## Step 1 — Completed — Re-run Phase 1 Prod Eval Gate
 
 Purpose: confirm the current Stage A model is still green/neutral before building Stage B.
 
@@ -54,9 +54,11 @@ Pass criteria:
 
 If this fails because coverage is low, it is probably not using `.env.prod`.
 
-## Step 2 — Measure Co-listening Density
+## Step 2 — Completed — Measure Co-listening Density
 
 Purpose: decide whether the graph is dense enough for node2vec or needs crawling first.
+
+Status: complete.
 
 Command:
 
@@ -74,11 +76,53 @@ Target gate from the spec:
 - Roughly 20k-30k nodes.
 - Average degree around 8-10+.
 
-Current known prod graph is far below this: 1422 nodes, 2415 edges, avg degree 3.4.
+Prod result captured July 2026:
+
+- `nodes`: 1422
+- `edges`: 2415
+- `avg_degree`: 3.4
+- `track_similar_edges`: 2400
+- `artist_similar_edges`: 15
+- `crawled_source_nodes`: 147
+- `degree_p50`: 1.0
+- `degree_p90`: 10.0
+- `degree_max`: 43
+
+Verdict: below the node2vec density gate. Do not train a production Stage B model yet.
+Proceed to Step 3 and grow `colisten_edges`.
 
 ## Step 3 — Grow `colisten_edges`
 
 Purpose: collect enough Last.fm `track.getSimilar` edges for meaningful graph embeddings.
+
+Status: in progress. Smoke crawl succeeded.
+
+Smoke crawl result captured July 2026:
+
+- Command shape: `crawl(max_depth=1, similar_limit=50, max_calls=100, delay=0.25)`
+- `calls`: 100
+- `edges_written`: 4391
+- `nodes`: 2963
+- `edges`: 6806
+- `avg_degree`: 4.59
+
+Verdict: crawler works against prod and only writes `colisten_edges`. More crawling is needed.
+
+Crawler speed-up added during Step 3:
+
+- `jobs/crawl_colisten.py` now accepts `--workers` for parallel Last.fm requests.
+- A shared rate limiter still spaces request starts by `--delay`.
+- Parallel mode batches `colisten_edges` upserts to reduce Neon connection/write overhead.
+- `--env-file .env.prod` is supported directly by the crawler CLI.
+
+Recommended next command:
+
+```bash
+.venv/bin/python -m jobs.crawl_colisten --env-file .env.prod --max-depth 2 --similar-limit 50 --max-calls 5000 --per-level-cap 2000 --delay 0.2 --workers 8 --batch-size 2000
+```
+
+If an old sequential crawl is still running, it can be stopped with `Ctrl+C`; rerunning
+the faster command resumes because already-crawled source IDs are skipped.
 
 Start with a bounded crawl:
 

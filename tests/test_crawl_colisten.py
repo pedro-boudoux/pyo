@@ -97,3 +97,34 @@ def test_seed_dedup(graph):
         max_depth=1, delay=0, verbose=False,
     )
     assert graph["crawled"] == [("A", "1")]
+
+
+def test_parallel_workers_batch_edge_writes(graph, monkeypatch):
+    graph["sim"][("A", "1")] = [_t("B", "2"), _t("C", "3")]
+    graph["sim"][("D", "4")] = [_t("E", "5")]
+    batches = []
+
+    def fake_edge_rows(src_artist, src_name, targets, source, weight=None):
+        return [(src_artist, src_name, t["artist"], t["name"]) for t in targets]
+
+    def fake_record_edge_rows(rows):
+        batches.append(list(rows))
+        graph["edges"].extend(rows)
+        return len(rows)
+
+    monkeypatch.setattr(cc.colisten, "edge_rows", fake_edge_rows)
+    monkeypatch.setattr(cc.colisten, "record_edge_rows", fake_record_edge_rows)
+
+    out = cc.crawl(
+        seed=[{"artist": "A", "name": "1"}, {"artist": "D", "name": "4"}],
+        max_depth=1,
+        workers=2,
+        batch_size=2,
+        delay=0,
+        verbose=False,
+    )
+
+    assert out["calls"] == 2
+    assert out["edges_written"] == 3
+    assert set(graph["crawled"]) == {("A", "1"), ("D", "4")}
+    assert sum(len(batch) for batch in batches) == 3

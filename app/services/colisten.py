@@ -13,34 +13,40 @@ from app.db import get_cursor
 from app.services.embeddings import make_track_id
 
 
-def record_edges(source_artist, source_track, targets, source, weight=None):
+def edge_rows(source_artist, source_track, targets, source, weight=None):
     """
-    Persist co-listening edges from one source track to a list of target tracks.
+    Shape co-listening edge rows from one source track to a list of target tracks.
 
     `targets` is a list of {"artist", "name", ...} dicts. The edge weight is each
     target's own "match" score when present (track.getSimilar carries one),
     otherwise the shared `weight` argument (used for artist.getSimilar, where the
     match score lives on the artist, not the track).
+    """
+    source_id = make_track_id(source_artist, source_track)
+    rows = []
+    for t in targets:
+        try:
+            target_id = make_track_id(t["artist"], t["name"])
+        except (KeyError, TypeError):
+            continue
+        if target_id == source_id:
+            continue
+        w = t.get("match") if isinstance(t, dict) else None
+        if w is None:
+            w = weight
+        rows.append((source_id, target_id, w, source))
+    return rows
+
+
+def record_edge_rows(rows):
+    """
+    Persist pre-shaped co-listening edge rows.
 
     Idempotent on (source, target, provenance): re-recording refreshes the weight.
-    Self-edges are skipped. Swallows all errors — this is opportunistic collection,
-    not part of any request's contract.
+    Swallows all errors — this is opportunistic collection, not part of any
+    request's contract.
     """
     try:
-        source_id = make_track_id(source_artist, source_track)
-        rows = []
-        for t in targets:
-            try:
-                target_id = make_track_id(t["artist"], t["name"])
-            except (KeyError, TypeError):
-                continue
-            if target_id == source_id:
-                continue
-            w = t.get("match") if isinstance(t, dict) else None
-            if w is None:
-                w = weight
-            rows.append((source_id, target_id, w, source))
-
         if not rows:
             return 0
 
@@ -55,6 +61,19 @@ def record_edges(source_artist, source_track, targets, source, weight=None):
                 rows,
             )
         return len(rows)
+    except Exception:
+        return 0
+
+
+def record_edges(source_artist, source_track, targets, source, weight=None):
+    """
+    Persist co-listening edges from one source track to a list of target tracks.
+
+    Kept as the request-path API; batch crawls use edge_rows + record_edge_rows
+    so many source tracks can be flushed through fewer DB connections.
+    """
+    try:
+        return record_edge_rows(edge_rows(source_artist, source_track, targets, source, weight))
     except Exception:
         return 0
 

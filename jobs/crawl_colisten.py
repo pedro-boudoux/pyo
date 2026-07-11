@@ -27,7 +27,29 @@ Check progress against the density gate (~20-30k nodes, avg degree >=8-10) with
 `colisten.graph_stats()` (printed at the end of every run).
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import sys
+import threading
 import time
+
+from dotenv import load_dotenv
+
+
+def _preload_env_file(argv: list[str]) -> None:
+    """Load --env-file before importing app.config-dependent modules."""
+    env_file = None
+    for idx, arg in enumerate(argv):
+        if arg == "--env-file" and idx + 1 < len(argv):
+            env_file = argv[idx + 1]
+            break
+        if arg.startswith("--env-file="):
+            env_file = arg.split("=", 1)[1]
+            break
+    if env_file:
+        load_dotenv(env_file, override=True)
+
+
+_preload_env_file(sys.argv[1:])
 
 from app.db import get_cursor
 from app.services import colisten, lastfm
@@ -38,6 +60,28 @@ DEFAULT_SIMILAR_LIMIT = 50
 DEFAULT_MAX_CALLS = 5000
 DEFAULT_PER_LEVEL_CAP = 2000
 DEFAULT_DELAY = 0.25  # ~4 req/s, comfortably under Last.fm's free tier
+DEFAULT_WORKERS = 1
+DEFAULT_BATCH_SIZE = 1000
+
+
+class _RateLimiter:
+    """Shared minimum interval between Last.fm request starts."""
+
+    def __init__(self, delay: float):
+        self.interval = max(0.0, float(delay or 0.0))
+        self._lock = threading.Lock()
+        self._next_at = 0.0
+
+    def wait(self):
+        if self.interval <= 0:
+            return
+        with self._lock:
+            now = time.monotonic()
+            start_at = max(now, self._next_at)
+            self._next_at = start_at + self.interval
+            wait_for = start_at - now
+        if wait_for > 0:
+            time.sleep(wait_for)
 
 
 def _load_seed_frontier(start_limit: int | None = None) -> list[dict]:
@@ -66,6 +110,29 @@ def _tid(artist: str, name: str) -> str | None:
         return None
 
 
+def _enqueue_similar(similar, *, visited, next_seen, next_frontier, per_level_cap):
+    """Queue newly discovered tracks for the next BFS level."""
+    for t in similar:
+        ttid = _tid(t.get("artist", ""), t.get("name", ""))
+        if (ttid and ttid not in visited and ttid not in next_seen
+                and len(next_frontier) < per_level_cap):
+            next_frontier.append({"artist": t["artist"], "name": t["name"]})
+            next_seen.add(ttid)
+
+
+def _crawl_one(node: dict, similar_limit: int, limiter: _RateLimiter) -> tuple[dict, list, list]:
+    limiter.wait()
+    try:
+        similar = lastfm.get_similar_tracks(node["artist"], node["name"], limit=similar_limit)
+    except Exception:
+        similar = []
+    try:
+        rows = colisten.edge_rows(node["artist"], node["name"], similar, source="track_similar")
+    except Exception:
+        rows = []
+    return node, similar, rows
+
+
 def crawl(
     *,
     seed: list[dict] | None = None,
@@ -74,6 +141,8 @@ def crawl(
     max_calls: int = DEFAULT_MAX_CALLS,
     per_level_cap: int = DEFAULT_PER_LEVEL_CAP,
     delay: float = DEFAULT_DELAY,
+    workers: int = DEFAULT_WORKERS,
+    batch_size: int = DEFAULT_BATCH_SIZE,
     verbose: bool = True,
 ) -> dict:
     """BFS over track.getSimilar, persisting edges as it goes. Returns a summary
@@ -100,43 +169,81 @@ def crawl(
             print(msg, flush=True)
 
     _log(f"crawl start: depth<={max_depth} similar_limit={similar_limit} "
-         f"max_calls={max_calls} frontier={len(frontier)} already_crawled={len(visited)}")
+         f"max_calls={max_calls} workers={workers} delay={delay} "
+         f"frontier={len(frontier)} already_crawled={len(visited)}")
 
     for depth in range(max_depth):
         if not frontier or calls >= max_calls:
             break
         next_frontier: list[dict] = []
         next_seen: set[str] = set()
-        level_calls = 0
+        remaining_budget = max_calls - calls
 
+        # Select this level's work up front. Mark as visited when scheduled so a
+        # duplicate track is not scheduled twice even with concurrent workers.
+        level_nodes: list[dict] = []
         for node in frontier:
-            if calls >= max_calls:
+            if len(level_nodes) >= remaining_budget:
                 break
             tid = _tid(node["artist"], node["name"])
             if tid is None or tid in visited:
                 continue
             visited.add(tid)
-            calls += 1
-            level_calls += 1
-            try:
-                similar = lastfm.get_similar_tracks(node["artist"], node["name"], limit=similar_limit)
-            except Exception:
-                similar = []
-            edges_written += colisten.record_edges(
-                node["artist"], node["name"], similar, source="track_similar"
-            )
-            # queue newly-discovered tracks for the next level
-            for t in similar:
-                ttid = _tid(t.get("artist", ""), t.get("name", ""))
-                if (ttid and ttid not in visited and ttid not in next_seen
-                        and len(next_frontier) < per_level_cap):
-                    next_frontier.append({"artist": t["artist"], "name": t["name"]})
-                    next_seen.add(ttid)
-            if delay:
-                time.sleep(delay)
-            if verbose and level_calls % 50 == 0:
-                _log(f"  depth {depth}: {level_calls} calls, {len(next_frontier)} discovered, "
-                     f"{edges_written} edges, {calls} total calls")
+            level_nodes.append(node)
+
+        level_calls = len(level_nodes)
+        calls += level_calls
+
+        if workers <= 1:
+            for i, node in enumerate(level_nodes, start=1):
+                try:
+                    similar = lastfm.get_similar_tracks(node["artist"], node["name"], limit=similar_limit)
+                except Exception:
+                    similar = []
+                edges_written += colisten.record_edges(
+                    node["artist"], node["name"], similar, source="track_similar"
+                )
+                _enqueue_similar(
+                    similar,
+                    visited=visited,
+                    next_seen=next_seen,
+                    next_frontier=next_frontier,
+                    per_level_cap=per_level_cap,
+                )
+                if delay:
+                    time.sleep(delay)
+                if verbose and i % 50 == 0:
+                    _log(f"  depth {depth}: {i}/{level_calls} calls, {len(next_frontier)} discovered, "
+                         f"{edges_written} edges, {calls} total calls")
+        else:
+            limiter = _RateLimiter(delay)
+            pending_rows = []
+            completed = 0
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = [
+                    pool.submit(_crawl_one, node, similar_limit, limiter)
+                    for node in level_nodes
+                ]
+                for fut in as_completed(futures):
+                    _, similar, rows = fut.result()
+                    completed += 1
+                    pending_rows.extend(rows)
+                    _enqueue_similar(
+                        similar,
+                        visited=visited,
+                        next_seen=next_seen,
+                        next_frontier=next_frontier,
+                        per_level_cap=per_level_cap,
+                    )
+                    if len(pending_rows) >= batch_size:
+                        edges_written += colisten.record_edge_rows(pending_rows)
+                        pending_rows = []
+                    if verbose and completed % 50 == 0:
+                        _log(f"  depth {depth}: {completed}/{level_calls} calls, "
+                             f"{len(next_frontier)} discovered, {edges_written} edges, "
+                             f"{calls} total calls")
+            if pending_rows:
+                edges_written += colisten.record_edge_rows(pending_rows)
 
         _log(f"depth {depth} done: {level_calls} calls -> {len(next_frontier)} next-level tracks")
         frontier = next_frontier
@@ -150,11 +257,14 @@ def crawl(
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Crawl the co-listening graph via Last.fm getSimilar.")
+    p.add_argument("--env-file", default=None, help="dotenv file to load before app config, e.g. .env.prod")
     p.add_argument("--max-depth", type=int, default=DEFAULT_MAX_DEPTH, help="BFS hops outward from the seed")
     p.add_argument("--similar-limit", type=int, default=DEFAULT_SIMILAR_LIMIT, help="targets per getSimilar call")
     p.add_argument("--max-calls", type=int, default=DEFAULT_MAX_CALLS, help="hard cap on total getSimilar calls")
     p.add_argument("--per-level-cap", type=int, default=DEFAULT_PER_LEVEL_CAP, help="max tracks carried to the next level")
     p.add_argument("--delay", type=float, default=DEFAULT_DELAY, help="seconds between calls (rate limit)")
+    p.add_argument("--workers", type=int, default=DEFAULT_WORKERS, help="parallel Last.fm workers; 1 preserves sequential crawl")
+    p.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE, help="edge rows per batched DB upsert when workers > 1")
     p.add_argument("--start-limit", type=int, default=None, help="only seed from the first N songs (test runs)")
     args = p.parse_args()
 
@@ -164,6 +274,8 @@ def main() -> int:
         max_calls=args.max_calls,
         per_level_cap=args.per_level_cap,
         delay=args.delay,
+        workers=args.workers,
+        batch_size=args.batch_size,
         seed=_load_seed_frontier(args.start_limit),
     )
     return 0
