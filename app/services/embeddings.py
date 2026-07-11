@@ -4,6 +4,7 @@ import numpy as np
 from app.db import get_cursor
 from app.config import EMBEDDING_DIM, TAG_EMBEDDING_DIM, DEFAULT_K
 from app.services import tag_encoder
+from app.services.vector_utils import to_float_list
 
 
 def make_track_id(artist: str, track: str) -> str:
@@ -234,7 +235,7 @@ def ann_search(
                 "artist": r["artist"],
                 "listeners": r["listeners"],
                 "image": r["image"],
-                "embedding": [float(x) for x in r["embedding"]],
+                "embedding": to_float_list(r["embedding"]),
                 "similarity": round(r["similarity"], 3),
             }
             for r in cur.fetchall()

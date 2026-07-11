@@ -4,6 +4,7 @@ from app.db import get_cursor
 from app.ratelimit import limiter
 from app.services import steering, lastfm, ingest, embeddings, colisten, blacklist
 from app.services.embeddings import mmr_rerank
+from app.services.vector_utils import to_float_list
 from app.config import DEFAULT_K, MMR_LAMBDA, MMR_POOL_MULTIPLIER, MMR_MAX_PER_ARTIST, RATE_LIMIT_HEAVY
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
@@ -136,7 +137,7 @@ def build_recommendations(
         song = ingest.embed_and_store_track(row["artist"], row["name"])
         base_embedding = song["embedding"] if song else None
     else:
-        base_embedding = list(row["embedding"])
+        base_embedding = to_float_list(row["embedding"])
 
     # No tags anywhere (or every tag fell outside the vocab window) yields an
     # all-zero vector, which makes cosine distance meaningless. There's genuinely

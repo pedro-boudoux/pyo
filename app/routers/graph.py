@@ -6,6 +6,7 @@ from app.models import (
 from app.db import get_cursor
 from app.ratelimit import limiter
 from app.services import lastfm, embeddings, ingest, colisten, blacklist
+from app.services.vector_utils import to_float_list
 from app.config import DEFAULT_K, RATE_LIMIT_HEAVY
 
 SEED_SIMILAR_LIMIT = 25
@@ -96,7 +97,7 @@ def add_seed(request: Request, response: Response, body: SeedRequest):
 
     if row["embedding"] is not None:
         # already cached — skip all API calls
-        vector = [float(x) for x in row["embedding"]]
+        vector = to_float_list(row["embedding"])
     else:
         # first time seeing this song — run the shared embedding pipeline. An
         # unbounded cap means the seed itself is never dropped for being too

@@ -5,6 +5,7 @@ from app.ratelimit import limiter
 from app.security import require_maintenance_key
 from app.services import lastfm, ingest, embeddings as emb_service, spotify
 from app.services.covers import get_cover_url, is_broken_image
+from app.services.vector_utils import to_float_list
 from app.db import get_cursor
 from app.config import RATE_LIMIT_HEAVY, RATE_LIMIT_MAINTENANCE
 
@@ -438,7 +439,7 @@ def get_song_features(request: Request, response: Response, track_id: str):
         # cache hit — reuse the stored vector, no API calls
         name, artist = row["name"], row["artist"]
         listeners = row["listeners"] or 0
-        embedding = [float(x) for x in row["embedding"]]
+        embedding = to_float_list(row["embedding"])
         tag_counts = row["tags"] or {}
     else:
         # cache miss — run the shared embedding pipeline. An unbounded cap means

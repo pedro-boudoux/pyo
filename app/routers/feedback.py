@@ -3,6 +3,7 @@ from app.models import FeedbackRequest, FeedbackResponse
 from app.db import get_cursor
 from app.ratelimit import limiter
 from app.services import steering, embeddings
+from app.services.vector_utils import to_float_list
 from app.config import DEFAULT_K, RATE_LIMIT_HEAVY
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
@@ -52,7 +53,7 @@ def submit_feedback(request: Request, response: Response, body: FeedbackRequest)
             )
             song_row = cursor.fetchone()
             if song_row and song_row["embedding"] is not None:
-                base_embedding = list(song_row["embedding"])
+                base_embedding = to_float_list(song_row["embedding"])
                 steered = steering.apply_steering(base_embedding, body.track_id)
 
                 neighbors = embeddings.ann_search(

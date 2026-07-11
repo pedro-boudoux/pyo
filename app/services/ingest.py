@@ -3,6 +3,7 @@ from psycopg2.extras import Json
 from app.db import get_cursor
 from app.services import lastfm, embeddings
 from app.services.covers import get_cover_url
+from app.services.vector_utils import to_float_list
 
 
 def embed_and_store_track(artist: str, name: str) -> dict | None:
@@ -33,7 +34,7 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
             "artist": row["artist"],
             "listeners": row["listeners"],
             "image": row["image"],
-            "embedding": [float(x) for x in row["embedding"]],
+            "embedding": to_float_list(row["embedding"]),
             "tags": row["tags"] or {},
         }
 

@@ -95,7 +95,8 @@ Proceed to Step 3 and grow `colisten_edges`.
 
 Purpose: collect enough Last.fm `track.getSimilar` edges for meaningful graph embeddings.
 
-Status: in progress. Smoke crawl succeeded.
+Status: in progress. Smoke crawl and larger crawls succeeded; graph has enough nodes
+but still needs more average degree before production node2vec training.
 
 Smoke crawl result captured July 2026:
 
@@ -107,6 +108,22 @@ Smoke crawl result captured July 2026:
 - `avg_degree`: 4.59
 
 Verdict: crawler works against prod and only writes `colisten_edges`. More crawling is needed.
+
+Post-crawl density captured July 2026:
+
+- `nodes`: 71505
+- `edges`: 222044
+- `avg_degree`: 6.21
+- `track_similar_edges`: 222029
+- `artist_similar_edges`: 15
+- `crawled_source_nodes`: 4596
+- `degree_p50`: 1.0
+- `degree_p90`: 10.0
+- `degree_max`: 241
+
+Verdict: node count exceeds the 20k-30k gate, but average degree is still below the
+8-10+ target. It is reasonable to proceed with Step 4 schema work in parallel, but
+do not treat a production node2vec training run as gated until density improves.
 
 Crawler speed-up added during Step 3:
 

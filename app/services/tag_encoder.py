@@ -16,6 +16,7 @@ import numpy as np
 
 from app.config import TAG_ENCODER_MODEL, TAG_EMBEDDING_DIM
 from app.db import get_cursor
+from app.services.vector_utils import to_float_list
 
 _model = None
 # Serialize encode calls: the backfill runs several worker threads, and the ONNX
@@ -55,7 +56,7 @@ def get_tag_embeddings(tags: list[str]) -> dict[str, np.ndarray]:
             "SELECT tag, embedding FROM tag_vocab WHERE tag = ANY(%s) AND embedding IS NOT NULL",
             (unique,),
         )
-        cached = {r["tag"]: np.asarray(r["embedding"], dtype=float) for r in cursor.fetchall()}
+        cached = {r["tag"]: np.asarray(to_float_list(r["embedding"]), dtype=float) for r in cursor.fetchall()}
 
     missing = [t for t in unique if t not in cached]
     if missing:

@@ -52,6 +52,7 @@ _preload_env_file(sys.argv[1:])
 
 from app.config import DEFAULT_K, MMR_LAMBDA
 from app.db import get_cursor
+from app.services.vector_utils import to_float_list
 from eval import ground_truth, metrics
 
 # Imported lazily-safe: this is the undecorated recommendation pipeline, not the
@@ -68,7 +69,7 @@ def _embeddings_for(track_ids: list[str]) -> dict[str, list]:
             "SELECT track_id, embedding FROM songs WHERE track_id = ANY(%s) AND embedding IS NOT NULL",
             (track_ids,),
         )
-        return {r["track_id"]: [float(x) for x in r["embedding"]] for r in cursor.fetchall()}
+        return {r["track_id"]: to_float_list(r["embedding"]) for r in cursor.fetchall()}
 
 
 def _scored_loop(seeds, k, progress_every: int = 0):

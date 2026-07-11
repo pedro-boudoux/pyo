@@ -3,6 +3,7 @@ from app.models import LinearPlaylistRequest, TreePlaylistRequest, PlaylistRespo
 from app.db import get_cursor
 from app.ratelimit import limiter
 from app.services import ingest, embeddings as emb_service, blacklist
+from app.services.vector_utils import to_float_list
 from app.config import MAX_LISTENERS, RATE_LIMIT_HEAVY
 
 router = APIRouter(prefix="/playlists", tags=["playlists"])
@@ -135,7 +136,7 @@ def linear_playlist(request: Request, response: Response, body: LinearPlaylistRe
         if not row or row["embedding"] is None:
             raise HTTPException(404, "Track not found or not yet embedded — seed it first")
 
-        seed_embedding = [float(x) for x in row["embedding"]]
+        seed_embedding = to_float_list(row["embedding"])
         neighborhood = get_neighborhood(cursor, body.track_id)
 
     embed_missing(neighborhood)
@@ -168,7 +169,7 @@ def tree_playlist(request: Request, response: Response, body: TreePlaylistReques
         if not row or row["embedding"] is None:
             raise HTTPException(404, "Track not found or not yet embedded — seed it first")
 
-        seed_embedding = [float(x) for x in row["embedding"]]
+        seed_embedding = to_float_list(row["embedding"])
         allowed = get_neighborhood(cursor, body.track_id)
 
     embed_missing(allowed)
@@ -201,7 +202,7 @@ def tree_playlist(request: Request, response: Response, body: TreePlaylistReques
                     break
                 playlist.append(neighbor)
                 seen.add(neighbor["track_id"])
-                queue.append((neighbor["track_id"], [float(x) for x in neighbor["embedding"]], depth + 1))
+                queue.append((neighbor["track_id"], to_float_list(neighbor["embedding"]), depth + 1))
 
     return PlaylistResponse(
         seed_track_id=body.track_id,
