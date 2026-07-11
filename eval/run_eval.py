@@ -7,6 +7,7 @@ writes the result to a baseline JSON for cross-run comparison.
 
     python -m eval.run_eval --model current
     python -m eval.run_eval --model current --out eval/baselines/sparse_tag_baseline.json
+    python -m eval.run_eval --env-file .env.prod --model stage_a_prod_recheck
 
 The model is identified only by label (the pipeline always uses whatever vectors
 are currently stored). Capture a baseline before a representation change, then
@@ -26,7 +27,28 @@ against a local/throwaway DB).
 import argparse
 import json
 import os
+import sys
+from collections import Counter
 from unittest.mock import patch
+
+from dotenv import load_dotenv
+
+
+def _preload_env_file(argv: list[str]) -> None:
+    """Load --env-file before importing app.config-dependent modules."""
+    env_file = None
+    for idx, arg in enumerate(argv):
+        if arg == "--env-file" and idx + 1 < len(argv):
+            env_file = argv[idx + 1]
+            break
+        if arg.startswith("--env-file="):
+            env_file = arg.split("=", 1)[1]
+            break
+    if env_file:
+        load_dotenv(env_file, override=True)
+
+
+_preload_env_file(sys.argv[1:])
 
 from app.config import DEFAULT_K, MMR_LAMBDA
 from app.db import get_cursor
@@ -49,12 +71,12 @@ def _embeddings_for(track_ids: list[str]) -> dict[str, list]:
         return {r["track_id"]: [float(x) for x in r["embedding"]] for r in cursor.fetchall()}
 
 
-def _scored_loop(seeds, k):
-    per_seed = {"recall": [], "mrr": [], "ild": [], "med_listeners": []}
-    scored = 0
-    for entry in seeds:
+def _scored_loop(seeds, k, progress_every: int = 0):
+    records = []
+    errors = Counter()
+    total = len(seeds)
+    for idx, entry in enumerate(seeds, start=1):
         seed_id = entry["seed_track_id"]
-        target = set(entry["targets"])
         try:
             resp = build_recommendations(
                 seed_id,
@@ -63,21 +85,42 @@ def _scored_loop(seeds, k):
                 exclude=[],
                 include_tags=False,
             )
-        except Exception:
+        except Exception as exc:
+            label = type(exc).__name__
+            if hasattr(exc, "status_code"):
+                label = f"HTTP {exc.status_code}"
+            errors[label] += 1
+            if progress_every and (idx % progress_every == 0 or idx == total):
+                print(f"  scored {len(records)} / {idx} seeds ({idx}/{total} visited)", file=sys.stderr, flush=True)
             continue
 
         recs = resp.recommendations if hasattr(resp, "recommendations") else resp["recommendations"]
-        rec_ids = [r.track_id for r in recs]
-        listeners = [r.listeners for r in recs]
-        emb_map = _embeddings_for(rec_ids)
+        records.append({
+            "target": set(entry["targets"]),
+            "rec_ids": [r.track_id for r in recs],
+            "listeners": [r.listeners for r in recs],
+        })
+        if progress_every and (idx % progress_every == 0 or idx == total):
+            print(f"  scored {len(records)} / {idx} seeds ({idx}/{total} visited)", file=sys.stderr, flush=True)
+
+    # Fetch recommendation embeddings once instead of once per seed. Over a remote
+    # prod DB this removes hundreds of round trips from the eval.
+    all_rec_ids = sorted({tid for record in records for tid in record["rec_ids"]})
+    emb_map = _embeddings_for(all_rec_ids)
+
+    per_seed = {"recall": [], "mrr": [], "ild": [], "med_listeners": []}
+    for record in records:
+        rec_ids = record["rec_ids"]
         vectors = [emb_map.get(tid) for tid in rec_ids]
 
-        per_seed["recall"].append(metrics.recall_at_k(rec_ids, target, k))
-        per_seed["mrr"].append(metrics.mrr(rec_ids, target))
+        per_seed["recall"].append(metrics.recall_at_k(rec_ids, record["target"], k))
+        per_seed["mrr"].append(metrics.mrr(rec_ids, record["target"]))
         per_seed["ild"].append(metrics.intra_list_distance(vectors))
-        per_seed["med_listeners"].append(metrics.median_listeners(listeners))
-        scored += 1
-    return per_seed, scored
+        per_seed["med_listeners"].append(metrics.median_listeners(record["listeners"]))
+
+    if errors:
+        print(f"  skipped seeds by error: {dict(errors)}", file=sys.stderr, flush=True)
+    return per_seed, len(records)
 
 
 def _result(model, k, scored, total, per_seed, read_only):
@@ -104,6 +147,7 @@ def evaluate(
     k: int = DEFAULT_K,
     gt_path: str = ground_truth.GROUND_TRUTH_PATH,
     read_only: bool = True,
+    progress_every: int = 0,
 ) -> dict:
     gt = ground_truth.load(gt_path)
     seeds = gt["seeds"]
@@ -115,9 +159,9 @@ def evaluate(
         # docstring. Patched on the recommendations module so the call inside
         # build_recommendations resolves to the no-op.
         with patch("app.routers.recommendations.topup_from_lastfm", return_value=[]):
-            per_seed, scored = _scored_loop(seeds, k)
+            per_seed, scored = _scored_loop(seeds, k, progress_every=progress_every)
     else:
-        per_seed, scored = _scored_loop(seeds, k)
+        per_seed, scored = _scored_loop(seeds, k, progress_every=progress_every)
 
     return _result(model, k, scored, len(seeds), per_seed, read_only)
 
@@ -140,6 +184,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run the recommendation eval.")
     parser.add_argument("--model", default="current", help="label for this run (e.g. current, stage_a)")
     parser.add_argument("--k", type=int, default=DEFAULT_K)
+    parser.add_argument("--env-file", default=None, help="dotenv file to load before app config, e.g. .env.prod")
     parser.add_argument("--ground-truth", default=ground_truth.GROUND_TRUTH_PATH)
     parser.add_argument("--out", default=None, help="optional path to write the result JSON")
     parser.add_argument(
@@ -147,6 +192,12 @@ def main() -> int:
         type=float,
         default=0.95,
         help="minimum fraction of ground-truth seeds that must score for the run to pass",
+    )
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=25,
+        help="print eval progress every N visited seeds; 0 disables progress output",
     )
     parser.add_argument(
         "--with-topup",
@@ -160,7 +211,13 @@ def main() -> int:
         print(f"Ground truth not found at {args.ground_truth}. Run: python -m eval.ground_truth --sample 300")
         return 1
 
-    result = evaluate(args.model, k=args.k, gt_path=args.ground_truth, read_only=not args.with_topup)
+    result = evaluate(
+        args.model,
+        k=args.k,
+        gt_path=args.ground_truth,
+        read_only=not args.with_topup,
+        progress_every=args.progress_every,
+    )
     _print_table(result)
 
     if args.out:
