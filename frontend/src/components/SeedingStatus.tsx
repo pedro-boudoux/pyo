@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-// Animated "…" (1→2→3 dots, looping) and the equalizer bars / scrim live in
+// Static "..." and the equalizer bars / scrim live in
 // index.css (`.loading-dots`, `.eq-bar`, `.seed-scrim`).
 
 type Phase = "checking" | "warm" | "cold";

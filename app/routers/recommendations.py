@@ -97,6 +97,26 @@ def get_recommendations(
     exclude: list[str] = Query(default=[]),
     exclude_artists: list[str] = Query(default=[]),
 ):
+    return build_recommendations(track_id, k, lambda_param, exclude, exclude_artists)
+
+
+def build_recommendations(
+    track_id: str,
+    k: int = DEFAULT_K,
+    lambda_param: float = MMR_LAMBDA,
+    exclude: list[str] | None = None,
+    exclude_artists: list[str] | None = None,
+    include_tags: bool = True,
+) -> RecommendationsResponse:
+    """Recommendation pipeline without HTTP/rate-limit concerns.
+
+    The FastAPI route above owns request parsing and SlowAPI enforcement; offline
+    eval calls this helper directly so it exercises the same ranking logic without
+    needing to manufacture Starlette request objects.
+    """
+    exclude = exclude or []
+    exclude_artists = exclude_artists or []
+
     with get_cursor() as cursor:
         cursor.execute(
             "SELECT name, artist, embedding FROM songs WHERE track_id = %s",
@@ -196,10 +216,10 @@ def get_recommendations(
             topup_from_lastfm(track_id, steered_embedding, already, k - len(reranked), already_keys, blocked_artists)
         )
 
-    # Ship each pick's top tags with the response so the node popover renders them
-    # without a second /features round-trip (issue #22). One batched read of the
-    # already-stored songs.tags — no extra Last.fm calls; missing tags → empty list.
-    tags_by_id = _fetch_tags([r["track_id"] for r in reranked])
+    # Ship each pick's top tags with the HTTP response so the node popover renders
+    # them without a second /features round-trip (issue #22). Offline eval does not
+    # need tags, so it can skip this extra DB query per seed.
+    tags_by_id = _fetch_tags([r["track_id"] for r in reranked]) if include_tags else {}
 
     recommendations = [
         Recommendation(

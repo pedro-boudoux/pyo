@@ -32,10 +32,10 @@ from app.config import DEFAULT_K, MMR_LAMBDA
 from app.db import get_cursor
 from eval import ground_truth, metrics
 
-# Imported lazily-safe: the router function is a plain callable. We pass k/lambda
-# explicitly because its signature uses FastAPI Query() defaults, which are NOT
-# the scalar defaults when the function is called directly.
-from app.routers.recommendations import get_recommendations
+# Imported lazily-safe: this is the undecorated recommendation pipeline, not the
+# FastAPI route wrapper. We pass k/lambda explicitly because route defaults use
+# FastAPI Query() objects, which are not scalar defaults outside HTTP.
+from app.routers.recommendations import build_recommendations
 
 
 def _embeddings_for(track_ids: list[str]) -> dict[str, list]:
@@ -56,7 +56,13 @@ def _scored_loop(seeds, k):
         seed_id = entry["seed_track_id"]
         target = set(entry["targets"])
         try:
-            resp = get_recommendations(seed_id, k=k, lambda_param=MMR_LAMBDA, exclude=[])
+            resp = build_recommendations(
+                seed_id,
+                k=k,
+                lambda_param=MMR_LAMBDA,
+                exclude=[],
+                include_tags=False,
+            )
         except Exception:
             continue
 
@@ -84,6 +90,7 @@ def _result(model, k, scored, total, per_seed, read_only):
         "read_only": read_only,
         "seeds_scored": scored,
         "seeds_total": total,
+        "coverage": round(scored / total, 4) if total else 0.0,
         f"recall_at_{k}": avg(per_seed["recall"]),
         "mrr": avg(per_seed["mrr"]),
         "intra_list_distance": avg(per_seed["ild"]),
@@ -106,7 +113,7 @@ def evaluate(
         # embeds+stores new songs and records colisten edges). This keeps the run
         # non-mutating, reproducible, and free of ground-truth leakage. See module
         # docstring. Patched on the recommendations module so the call inside
-        # get_recommendations resolves to the no-op.
+        # build_recommendations resolves to the no-op.
         with patch("app.routers.recommendations.topup_from_lastfm", return_value=[]):
             per_seed, scored = _scored_loop(seeds, k)
     else:
@@ -119,7 +126,7 @@ def _print_table(result: dict) -> None:
     print()
     print(f"  model:           {result['model']}")
     print(f"  mode:            {'read-only (no top-up)' if result.get('read_only', True) else 'full pipeline (writes)'}")
-    print(f"  seeds scored:    {result['seeds_scored']} / {result['seeds_total']}")
+    print(f"  seeds scored:    {result['seeds_scored']} / {result['seeds_total']} ({result['coverage']:.1%})")
     print("  " + "-" * 38)
     k = result["k"]
     print(f"  recall@{k:<10} {result[f'recall_at_{k}']:.4f}")
@@ -135,6 +142,12 @@ def main() -> int:
     parser.add_argument("--k", type=int, default=DEFAULT_K)
     parser.add_argument("--ground-truth", default=ground_truth.GROUND_TRUTH_PATH)
     parser.add_argument("--out", default=None, help="optional path to write the result JSON")
+    parser.add_argument(
+        "--min-coverage",
+        type=float,
+        default=0.95,
+        help="minimum fraction of ground-truth seeds that must score for the run to pass",
+    )
     parser.add_argument(
         "--with-topup",
         action="store_true",
@@ -155,6 +168,13 @@ def main() -> int:
         with open(args.out, "w") as f:
             json.dump(result, f, indent=2)
         print(f"Wrote result to {args.out}")
+    if result["coverage"] < args.min_coverage:
+        print(
+            f"Coverage {result['coverage']:.1%} is below --min-coverage "
+            f"{args.min_coverage:.1%}; point DATABASE_URL at the DB used for this ground truth "
+            "or lower the threshold for a smoke run."
+        )
+        return 2
     return 0
 
 
