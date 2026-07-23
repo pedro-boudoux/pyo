@@ -24,11 +24,11 @@ Usage
   python -m tests.stress --concurrency 20 --duration 30 --scenario journey
 
   # Prod, safe read-only load
-  python -m tests.stress --base-url https://pyo-backend.up.railway.app \
+  python -m tests.stress --base-url https://pyo-backend.pedroboudoux.com \
       --concurrency 10 --duration 20
 
   # Prod, single endpoint
-  python -m tests.stress --base-url https://pyo-backend.up.railway.app \
+  python -m tests.stress --base-url https://pyo-backend.pedroboudoux.com \
       --scenario search --concurrency 25 --duration 15
 
 Exit code is 1 if any endpoint's error rate exceeds --fail-error-rate (default

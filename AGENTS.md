@@ -632,7 +632,7 @@ uvicorn app.main:app --reload
   concurrency. Not collected by pytest. Run it:
   ```bash
   make stress                                              # local journey (search→seed→recs→…)
-  make stress STRESS_URL=https://pyo-backend.up.railway.app # prod, read-only & safe
+  make stress STRESS_URL=https://pyo-backend.pedroboudoux.com # prod, read-only & safe
   python -m tests.stress --scenario search --concurrency 25 --duration 15
   ```
   **Prod safety:** `POST /graph/seed` and `POST /feedback` mutate graph state, so

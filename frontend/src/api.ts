@@ -5,9 +5,10 @@ import type {
   SongSearchResult,
 } from "./types";
 
-const API_BASE =
-  (import.meta.env.VITE_API_BASE as string | undefined) ??
-  "https://pyo-backend.up.railway.app";
+const API_BASE = (
+  (import.meta.env.VITE_API_BASE as string | undefined)?.trim() ||
+  "https://pyo-backend.pedroboudoux.com"
+).replace(/\/$/, "");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

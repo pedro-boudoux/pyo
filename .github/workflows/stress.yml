@@ -12,7 +12,7 @@ on:
     inputs:
       base_url:
         description: Target API base URL
-        default: https://pyo-backend.up.railway.app
+        default: https://pyo-backend.pedroboudoux.com
       scenario:
         description: Scenario
         type: choice
@@ -55,7 +55,7 @@ jobs:
       - name: Run stress test
         run: |
           python -m tests.stress \
-            --base-url "${{ github.event.inputs.base_url || 'https://pyo-backend.up.railway.app' }}" \
+            --base-url "${{ github.event.inputs.base_url || 'https://pyo-backend.pedroboudoux.com' }}" \
             --scenario "${{ github.event.inputs.scenario || 'read-only' }}" \
             --concurrency "${{ github.event.inputs.concurrency || '10' }}" \
             --duration "${{ github.event.inputs.duration || '20' }}" \

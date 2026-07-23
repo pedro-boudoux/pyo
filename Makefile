@@ -39,7 +39,7 @@ test:
 
 # Load test a running server. Targets local by default; override the URL to hit
 # prod (read-only there unless you add --allow-writes), e.g.:
-#   make stress STRESS_URL=https://pyo-backend.up.railway.app
+#   make stress STRESS_URL=https://pyo-backend.pedroboudoux.com
 stress:
 	$(VENV)/bin/python -m tests.stress --base-url $(STRESS_URL) $(STRESS_ARGS)
 
