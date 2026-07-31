@@ -144,9 +144,11 @@ python -m jobs.train_colisten_embeddings --workers 4 --beta "$COLISTEN_BETA"
 The trainer remains density-gated and records every successful run in
 `model_runs`. It is not part of the lean API process and should not be scheduled
 until the first manual production training and independent beta evaluation pass.
-Do not use the MacBook's historical `.env.prod` for production training without
-rechecking it: the live API currently uses the private Coolify Postgres service,
-while that file can still point at the retired Neon target.
+The MacBook's ignored `.env.prod` now targets the live private Coolify Postgres
+through a localhost SSH tunnel. The tunnel must be listening before local crawl,
+training, or eval commands use that file; the database itself remains private.
+The previous Neon crawl was merged idempotently into production before the file
+was switched, so its collected edges were preserved.
 
 The independent Stage B fixture is built from cross-artist adjacency in public
 Deezer playlists, never Last.fm `getSimilar`:

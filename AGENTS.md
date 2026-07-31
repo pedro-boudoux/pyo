@@ -373,6 +373,14 @@ CREATE TABLE colisten_edges (
 CREATE UNIQUE INDEX ON colisten_edges(source_track_id, target_track_id, source);
 CREATE INDEX ON colisten_edges(source_track_id);
 
+-- Successful crawler calls with no similar tracks cannot create an edge source,
+-- so persist completion separately to keep resumable crawls moving forward.
+CREATE TABLE colisten_crawl_state (
+    track_id     TEXT PRIMARY KEY,
+    result_count INTEGER NOT NULL DEFAULT 0,
+    crawled_at   TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE model_runs (
     id BIGSERIAL PRIMARY KEY,
     model TEXT NOT NULL,

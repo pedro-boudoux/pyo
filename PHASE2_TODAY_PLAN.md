@@ -241,11 +241,13 @@ Acceptable sources:
 
 Do not use Last.fm `getSimilar` as the only Stage B ground truth.
 
-Operational correction: the MacBook's `.env.prod` currently points to the old
-Neon database, while the live Coolify API uses its private homelab Postgres
-service. At verification time the live graph had 102,090 nodes, 373,217 edges,
-and average degree 7.31. Production training must inherit `DATABASE_URL` from
-Coolify; do not train the Neon graph by accident.
+Operational correction completed July 31, 2026: the completed Neon crawl had
+489,548 edges. It was merged idempotently into the live Coolify database,
+contributing 127,720 new edges and refreshing 361,828 overlaps. The live graph
+then had 126,854 nodes, 500,974 edges, and average degree 7.90. The MacBook's
+ignored `.env.prod` now reaches that private database through an SSH tunnel on
+localhost; production workers should still inherit `DATABASE_URL` directly from
+Coolify.
 
 ## Step 7 — Wire Hybrid Vector, Sweep Beta, Commit Result
 

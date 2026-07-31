@@ -13,9 +13,10 @@ This is an OFFLINE batch job, not a request path:
     python -m jobs.crawl_colisten --start-limit 200   # small test run
 
 Properties:
-  - Resumable / idempotent. Tracks already crawled (already a *source* in
-    colisten_edges) are skipped, so re-running picks up where it left off, and the
-    underlying upsert just refreshes weights.
+  - Resumable / idempotent. Edge-producing sources are detected in
+    colisten_edges; successful zero-result calls are recorded in
+    colisten_crawl_state. Both are skipped on later runs, so the crawl advances
+    instead of retrying empty tracks forever.
   - Budget-capped. `--max-calls` hard-limits total getSimilar calls (cost/time), and
     `--per-level-cap` bounds the BFS fan-out so a level can't explode.
   - Rate-limited. `--delay` seconds between calls keeps us within Last.fm's free tier.
@@ -85,8 +86,9 @@ class _RateLimiter:
 
 
 def _load_seed_frontier(start_limit: int | None = None) -> list[dict]:
-    """The crawl's depth-0 frontier: the songs we already have."""
-    sql = "SELECT name, artist FROM songs ORDER BY id"
+    """The crawl's depth-0 frontier: useful/warm songs first, then cold rows."""
+    sql = """SELECT name, artist FROM songs
+             ORDER BY (embedding IS NULL), (listeners IS NULL), id"""
     params = ()
     if start_limit:
         sql += " LIMIT %s"
@@ -97,10 +99,14 @@ def _load_seed_frontier(start_limit: int | None = None) -> list[dict]:
 
 
 def _already_crawled() -> set[str]:
-    """track_ids we've already asked getSimilar for (a source in colisten_edges)."""
+    """Sources with edges plus successful zero-result calls from prior runs."""
     with get_cursor() as cursor:
-        cursor.execute("SELECT DISTINCT source_track_id FROM colisten_edges")
-        return {r["source_track_id"] for r in cursor.fetchall()}
+        cursor.execute("""
+            SELECT source_track_id AS track_id FROM colisten_edges
+            UNION
+            SELECT track_id FROM colisten_crawl_state
+        """)
+        return {r["track_id"] for r in cursor.fetchall()}
 
 
 def _tid(artist: str, name: str) -> str | None:
@@ -120,17 +126,17 @@ def _enqueue_similar(similar, *, visited, next_seen, next_frontier, per_level_ca
             next_seen.add(ttid)
 
 
-def _crawl_one(node: dict, similar_limit: int, limiter: _RateLimiter) -> tuple[dict, list, list]:
+def _crawl_one(node: dict, similar_limit: int, limiter: _RateLimiter) -> tuple[dict, list, list, bool]:
     limiter.wait()
     try:
         similar = lastfm.get_similar_tracks(node["artist"], node["name"], limit=similar_limit)
     except Exception:
-        similar = []
+        return node, [], [], False
     try:
         rows = colisten.edge_rows(node["artist"], node["name"], similar, source="track_similar")
     except Exception:
         rows = []
-    return node, similar, rows
+    return node, similar, rows, True
 
 
 def crawl(
@@ -163,6 +169,8 @@ def crawl(
 
     calls = 0
     edges_written = 0
+    empty_completed = 0
+    errors = 0
 
     def _log(msg):
         if verbose:
@@ -195,14 +203,24 @@ def crawl(
         calls += level_calls
 
         if workers <= 1:
+            pending_empty = []
             for i, node in enumerate(level_nodes, start=1):
                 try:
                     similar = lastfm.get_similar_tracks(node["artist"], node["name"], limit=similar_limit)
                 except Exception:
-                    similar = []
-                edges_written += colisten.record_edges(
+                    errors += 1
+                    continue
+                written = colisten.record_edges(
                     node["artist"], node["name"], similar, source="track_similar"
                 )
+                edges_written += written
+                if not similar:
+                    track_id = _tid(node["artist"], node["name"])
+                    if track_id:
+                        pending_empty.append(track_id)
+                    if len(pending_empty) >= batch_size:
+                        empty_completed += colisten.record_crawl_states(pending_empty)
+                        pending_empty = []
                 _enqueue_similar(
                     similar,
                     visited=visited,
@@ -214,43 +232,68 @@ def crawl(
                     time.sleep(delay)
                 if verbose and i % 50 == 0:
                     _log(f"  depth {depth}: {i}/{level_calls} calls, {len(next_frontier)} discovered, "
-                         f"{edges_written} edges, {calls} total calls")
+                         f"{edges_written} edges, {empty_completed + len(pending_empty)} empty, "
+                         f"{errors} errors")
+            if pending_empty:
+                empty_completed += colisten.record_crawl_states(pending_empty)
         else:
             limiter = _RateLimiter(delay)
             pending_rows = []
+            pending_empty = []
             completed = 0
+            request_batch = max(50, workers * 4)
             with ThreadPoolExecutor(max_workers=workers) as pool:
-                futures = [
-                    pool.submit(_crawl_one, node, similar_limit, limiter)
-                    for node in level_nodes
-                ]
-                for fut in as_completed(futures):
-                    _, similar, rows = fut.result()
-                    completed += 1
-                    pending_rows.extend(rows)
-                    _enqueue_similar(
-                        similar,
-                        visited=visited,
-                        next_seen=next_seen,
-                        next_frontier=next_frontier,
-                        per_level_cap=per_level_cap,
-                    )
-                    if len(pending_rows) >= batch_size:
-                        edges_written += colisten.record_edge_rows(pending_rows)
-                        pending_rows = []
-                    if verbose and completed % 50 == 0:
-                        _log(f"  depth {depth}: {completed}/{level_calls} calls, "
-                             f"{len(next_frontier)} discovered, {edges_written} edges, "
-                             f"{calls} total calls")
+                for offset in range(0, len(level_nodes), request_batch):
+                    futures = [
+                        pool.submit(_crawl_one, node, similar_limit, limiter)
+                        for node in level_nodes[offset : offset + request_batch]
+                    ]
+                    for fut in as_completed(futures):
+                        node, similar, rows, succeeded = fut.result()
+                        completed += 1
+                        if not succeeded:
+                            errors += 1
+                            continue
+                        pending_rows.extend(rows)
+                        if not similar:
+                            track_id = _tid(node["artist"], node["name"])
+                            if track_id:
+                                pending_empty.append(track_id)
+                        _enqueue_similar(
+                            similar,
+                            visited=visited,
+                            next_seen=next_seen,
+                            next_frontier=next_frontier,
+                            per_level_cap=per_level_cap,
+                        )
+                        if len(pending_rows) >= batch_size:
+                            edges_written += colisten.record_edge_rows(pending_rows)
+                            pending_rows = []
+                        if len(pending_empty) >= batch_size:
+                            empty_completed += colisten.record_crawl_states(pending_empty)
+                            pending_empty = []
+                        if verbose and completed % 50 == 0:
+                            _log(f"  depth {depth}: {completed}/{level_calls} calls, "
+                                 f"{len(next_frontier)} discovered, {edges_written} edges, "
+                                 f"{empty_completed + len(pending_empty)} empty, {errors} errors")
             if pending_rows:
                 edges_written += colisten.record_edge_rows(pending_rows)
+            if pending_empty:
+                empty_completed += colisten.record_crawl_states(pending_empty)
 
         _log(f"depth {depth} done: {level_calls} calls -> {len(next_frontier)} next-level tracks")
         frontier = next_frontier
 
     stats = colisten.graph_stats()
-    summary = {"calls": calls, "edges_written": edges_written, **stats}
+    summary = {
+        "calls": calls,
+        "edges_written": edges_written,
+        "empty_completed": empty_completed,
+        "errors": errors,
+        **stats,
+    }
     _log(f"DONE calls={calls} edges_written={edges_written} "
+         f"empty_completed={empty_completed} errors={errors} "
          f"graph: nodes={stats['nodes']} edges={stats['edges']} avg_degree={stats['avg_degree']}")
     return summary
 

@@ -30,6 +30,7 @@ def graph(monkeypatch):
 
     monkeypatch.setattr(cc.lastfm, "get_similar_tracks", fake_get_similar)
     monkeypatch.setattr(cc.colisten, "record_edges", fake_record_edges)
+    monkeypatch.setattr(cc.colisten, "record_crawl_states", lambda track_ids: len(track_ids))
     monkeypatch.setattr(cc.colisten, "graph_stats", lambda: {"nodes": 0, "edges": 0, "avg_degree": 0.0})
     # no prior crawl state unless a test overrides it (avoids touching the DB)
     monkeypatch.setattr(cc, "_already_crawled", lambda: set())
@@ -97,6 +98,49 @@ def test_seed_dedup(graph):
         max_depth=1, delay=0, verbose=False,
     )
     assert graph["crawled"] == [("A", "1")]
+
+
+def test_successful_empty_result_is_persisted_for_resume(graph, monkeypatch):
+    completed = []
+    monkeypatch.setattr(
+        cc.colisten,
+        "record_crawl_states",
+        lambda track_ids: completed.extend(track_ids) or len(track_ids),
+    )
+
+    out = cc.crawl(
+        seed=[{"artist": "A", "name": "empty"}],
+        max_depth=1,
+        delay=0,
+        verbose=False,
+    )
+
+    assert completed == [make_track_id("A", "empty")]
+    assert out["empty_completed"] == 1
+
+
+def test_failed_call_is_not_marked_complete(graph, monkeypatch):
+    completed = []
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("temporary upstream error")
+
+    monkeypatch.setattr(cc.lastfm, "get_similar_tracks", fail)
+    monkeypatch.setattr(
+        cc.colisten,
+        "record_crawl_states",
+        lambda track_ids: completed.extend(track_ids) or len(track_ids),
+    )
+
+    out = cc.crawl(
+        seed=[{"artist": "A", "name": "retry me"}],
+        max_depth=1,
+        delay=0,
+        verbose=False,
+    )
+
+    assert completed == []
+    assert out["errors"] == 1
 
 
 def test_parallel_workers_batch_edge_writes(graph, monkeypatch):

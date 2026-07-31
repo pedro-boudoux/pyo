@@ -118,3 +118,13 @@ def test_errors_are_swallowed(monkeypatch):
         "A", "B", [{"artist": "C", "name": "D", "match": 0.5}], source="track_similar"
     )
     assert n == 0
+
+
+def test_record_crawl_states_dedupes_track_ids(monkeypatch):
+    cursor = RecordingCursor()
+    monkeypatch.setattr(colisten, "get_cursor", fake_get_cursor_factory(cursor))
+
+    n = colisten.record_crawl_states(["track-a", "track-a", "track-b"])
+
+    assert n == 2
+    assert cursor.executemany_rows == [("track-a", 0), ("track-b", 0)]

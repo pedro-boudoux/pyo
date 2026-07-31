@@ -78,6 +78,33 @@ def record_edges(source_artist, source_track, targets, source, weight=None):
         return 0
 
 
+def record_crawl_states(track_ids, result_count=0):
+    """Mark successful crawler calls complete, including zero-result tracks.
+
+    API failures are deliberately not written here so a later run can retry.
+    Edge-producing sources remain resumable through ``colisten_edges`` itself;
+    this state primarily prevents empty successful calls from looping forever.
+    """
+    try:
+        rows = [(track_id, result_count) for track_id in dict.fromkeys(track_ids) if track_id]
+        if not rows:
+            return 0
+        with get_cursor() as cursor:
+            cursor.executemany(
+                """
+                INSERT INTO colisten_crawl_state (track_id, result_count, crawled_at)
+                VALUES (%s, %s, now())
+                ON CONFLICT (track_id) DO UPDATE SET
+                    result_count = EXCLUDED.result_count,
+                    crawled_at = EXCLUDED.crawled_at
+                """,
+                rows,
+            )
+        return len(rows)
+    except Exception:
+        return 0
+
+
 def graph_stats() -> dict:
     """
     Node/edge counts + average degree for the density gate (Phase 2 task 13).

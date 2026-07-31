@@ -70,6 +70,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_colisten_edges_unique
 CREATE INDEX IF NOT EXISTS idx_colisten_edges_source
     ON colisten_edges(source_track_id);
 
+-- Durable completion state for successful getSimilar calls, including tracks
+-- that return zero results and therefore cannot create a colisten_edges source.
+CREATE TABLE IF NOT EXISTS colisten_crawl_state (
+    track_id     TEXT PRIMARY KEY,
+    result_count INTEGER NOT NULL DEFAULT 0,
+    crawled_at   TIMESTAMPTZ DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS model_runs (
     id            BIGSERIAL PRIMARY KEY,
     model         TEXT NOT NULL,

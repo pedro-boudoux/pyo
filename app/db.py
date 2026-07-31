@@ -171,6 +171,17 @@ def init_db():
             )
         """)
 
+        # Successful getSimilar calls that returned no edges still need durable
+        # crawl state. Without this table an offline crawl retries the same empty
+        # tracks on every run and never advances through the remaining catalog.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS colisten_crawl_state (
+                track_id     TEXT PRIMARY KEY,
+                result_count INTEGER NOT NULL DEFAULT 0,
+                crawled_at   TIMESTAMPTZ DEFAULT now()
+            )
+        """)
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS model_runs (
                 id            BIGSERIAL PRIMARY KEY,
