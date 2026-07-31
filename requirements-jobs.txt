@@ -1,0 +1,5 @@
+# Offline Phase 2 training only; use the project's pinned Python 3.12. Gensim
+# publishes a cp312 macOS arm64 wheel but does not currently build on Python 3.14.
+# The Coolify API image does not need this dependency; install it in the separate
+# training job/worker only.
+gensim>=4.3,<5

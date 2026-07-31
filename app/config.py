@@ -60,9 +60,23 @@ MAINTENANCE_API_KEY = os.getenv("MAINTENANCE_API_KEY")
 EMBEDDING_DIM = 384
 TAG_EMBEDDING_DIM = 384
 LEGACY_EMBEDDING_DIM = 300
+COLISTEN_EMBEDDING_DIM = 128
+HYBRID_EMBEDDING_DIM = TAG_EMBEDDING_DIM + COLISTEN_EMBEDDING_DIM
+
+# Phase 2 model selection. Stage A remains the safe default until the independent
+# co-listening eval chooses a beta and the production hybrid backfill completes.
+# Setting RECOMMENDATION_MODEL=hybrid switches ANN, MMR, steering and playlists to
+# songs.hybrid_embedding; the original songs.embedding vector(384) stays intact as
+# an instant rollback path.
+RECOMMENDATION_MODEL = os.getenv("RECOMMENDATION_MODEL", "stage_a").strip().lower()
+if RECOMMENDATION_MODEL not in ("stage_a", "hybrid"):
+    RECOMMENDATION_MODEL = "stage_a"
+COLISTEN_BETA = float(os.getenv("COLISTEN_BETA", "0"))
+COLISTEN_MIN_NODES = int(os.getenv("COLISTEN_MIN_NODES", "20000"))
+COLISTEN_MIN_AVG_DEGREE = float(os.getenv("COLISTEN_MIN_AVG_DEGREE", "8"))
 
 # Semantic tag encoder. fastembed (ONNX) loads all-MiniLM-L6-v2 on CPU (~80MB),
-# no torch — keeps the Railway build light. Output is 384-dim.
+# no torch — keeps the Coolify API image light. Output is 384-dim.
 TAG_ENCODER_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 MMR_LAMBDA = 0.7         # relevance vs diversity tradeoff (1.0 = pure relevance, 0.0 = pure diversity)
 MMR_POOL_MULTIPLIER = 3  # fetch this many × k candidates before re-ranking

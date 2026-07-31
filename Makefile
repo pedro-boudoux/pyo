@@ -14,7 +14,7 @@
 VENV ?= .venv
 STRESS_URL ?= http://localhost:8000
 
-.PHONY: db db-down db-reset api web test stress install
+.PHONY: db db-down db-reset api web test stress install crawl-colisten train-colisten rebuild-hybrid
 
 db:
 	docker compose up -d
@@ -46,3 +46,12 @@ stress:
 install:
 	$(VENV)/bin/pip install -r requirements.txt -r requirements-dev.txt
 	cd frontend && npm install
+
+crawl-colisten:
+	$(VENV)/bin/python -m jobs.crawl_colisten $(COLISTEN_ARGS)
+
+train-colisten:
+	$(VENV)/bin/python -m jobs.train_colisten_embeddings $(COLISTEN_ARGS)
+
+rebuild-hybrid:
+	$(VENV)/bin/python -m jobs.rebuild_hybrid_embeddings $(COLISTEN_ARGS)

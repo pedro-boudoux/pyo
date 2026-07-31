@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from app.models import LinearPlaylistRequest, TreePlaylistRequest, PlaylistResponse, PlaylistTrack
 from app.db import get_cursor
 from app.ratelimit import limiter
-from app.services import ingest, embeddings as emb_service, blacklist
+from app.services import ingest, embeddings as emb_service, blacklist, hybrid
 from app.services.vector_utils import to_float_list
 from app.config import MAX_LISTENERS, RATE_LIMIT_HEAVY
 
@@ -14,9 +14,10 @@ NICHE_THRESHOLDS = [100, 1_000, 10_000, 100_000, MAX_LISTENERS]
 def embed_missing(track_ids: set):
     if not track_ids:
         return
+    embedding_column = hybrid.active_embedding_column()
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT artist, name FROM songs WHERE track_id = ANY(%s) AND embedding IS NULL",
+            f"SELECT artist, name FROM songs WHERE track_id = ANY(%s) AND {embedding_column} IS NULL",
             (list(track_ids),)
         )
         unembedded = cursor.fetchall()
@@ -127,9 +128,10 @@ def to_playlist_tracks(rows: list[dict]) -> list[PlaylistTrack]:
 @router.post("/linear", response_model=PlaylistResponse)
 @limiter.limit(RATE_LIMIT_HEAVY)
 def linear_playlist(request: Request, response: Response, body: LinearPlaylistRequest):
+    embedding_column = hybrid.active_embedding_column()
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT embedding FROM songs WHERE track_id = %s",
+            f"SELECT {embedding_column} AS embedding FROM songs WHERE track_id = %s",
             (body.track_id,)
         )
         row = cursor.fetchone()
@@ -160,9 +162,10 @@ def linear_playlist(request: Request, response: Response, body: LinearPlaylistRe
 @router.post("/tree", response_model=PlaylistResponse)
 @limiter.limit(RATE_LIMIT_HEAVY)
 def tree_playlist(request: Request, response: Response, body: TreePlaylistRequest):
+    embedding_column = hybrid.active_embedding_column()
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT embedding FROM songs WHERE track_id = %s",
+            f"SELECT {embedding_column} AS embedding FROM songs WHERE track_id = %s",
             (body.track_id,)
         )
         row = cursor.fetchone()

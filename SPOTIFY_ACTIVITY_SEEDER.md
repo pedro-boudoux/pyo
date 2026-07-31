@@ -85,6 +85,12 @@ Assume `PYO_API_BASE` points at the deployed API, for example:
 https://pyo-backend.pedroboudoux.com
 ```
 
+Operational note for agents: this API is the Coolify app `pyo prod` on Pedro's
+homelab. From Pedro's MacBook, use `ssh pedro-homelab` to inspect the host or
+Coolify state. Do not paste Coolify environment values or full database URLs into
+logs, docs, or chat; verify `DATABASE_URL` in Coolify before assuming where the
+backend database lives.
+
 ### 1. Resolve Spotify play to a Pyo track candidate
 
 Use the Spotify track's primary artist and name:

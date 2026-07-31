@@ -18,15 +18,15 @@ def client_ip(request) -> str:
     """
     Identify the caller for rate-limit bucketing.
 
-    Railway sets X-Real-IP to the original client address. Do not trust
+    The production reverse proxy sets X-Real-IP to the original client address. Do not trust
     X-Forwarded-For here: callers can supply it themselves and rotate the value
-    to evade a per-IP limit. Invalid/missing Railway headers fall back to the
+    to evade a per-IP limit. Invalid/missing proxy headers fall back to the
     socket peer for local development.
     """
-    railway_ip = request.headers.get("x-real-ip", "").strip()
-    if railway_ip:
+    proxy_ip = request.headers.get("x-real-ip", "").strip()
+    if proxy_ip:
         try:
-            return str(ip_address(railway_ip))
+            return str(ip_address(proxy_ip))
         except ValueError:
             pass
     return get_remote_address(request)

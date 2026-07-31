@@ -5,7 +5,7 @@ from app.models import (
 )
 from app.db import get_cursor
 from app.ratelimit import limiter
-from app.services import lastfm, embeddings, ingest, colisten, blacklist
+from app.services import lastfm, embeddings, ingest, colisten, blacklist, hybrid
 from app.services.vector_utils import to_float_list
 from app.config import DEFAULT_K, RATE_LIMIT_HEAVY
 
@@ -84,9 +84,10 @@ def graph_dominant_tags(request: GraphTagsRequest):
 @router.post("/seed")
 @limiter.limit(RATE_LIMIT_HEAVY)
 def add_seed(request: Request, response: Response, body: SeedRequest):
+    embedding_column = hybrid.active_embedding_column()
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT name, artist, listeners, embedding FROM songs WHERE track_id = %s",
+            f"SELECT name, artist, listeners, {embedding_column} AS embedding FROM songs WHERE track_id = %s",
             (body.track_id,)
         )
         row = cursor.fetchone()

@@ -26,6 +26,12 @@ Every song gets turned into a vector, and that vector is built from a blended se
 
 Each of those tags is encoded into a shared semantic space with a small sentence-transformer model (`all-MiniLM-L6-v2`), and a song's vector is the count-weighted average of its tag vectors. Thus related tags like "hip hop" and "rap" sit close together, so songs end up near each other when they *sound* alike.
 
+Phase 2 adds a second, 128-dimensional signal learned from the accumulated
+`track.getSimilar` graph. The candidate representation is
+`normalize(concat(tag_vec, beta × colisten_vec))` (512 dimensions). Stage A remains
+the production default until the graph density gate and independent beta evaluation
+pass; `RECOMMENDATION_MODEL=hybrid` is the explicit rollout switch.
+
 Track identity is also a bit stricter than it used to be. The backend still stores the exact song you searched for, but it also computes a looser canonical key so cosmetic variants like clean / explicit / remastered versions collapse together instead of clogging the top of the recs with the same recording three times.
 
 So yes, finding "songs like this one" does start as a nearest-neighbour search. But the actual recommendation loop does more than that:
@@ -69,6 +75,41 @@ The **Graph Info** panel sums the tag weights across every node on screen and te
 
 ---
 
+## Current deployment
+
+The live frontend is GitHub Pages:
+
+```text
+https://pedro-boudoux.github.io/pyo
+```
+
+The production backend is the Coolify app `pyo prod` on Pedro's homelab:
+
+```text
+https://pyo-backend.pedroboudoux.com
+```
+
+Quick check:
+
+```bash
+curl -fsS https://pyo-backend.pedroboudoux.com/health
+```
+
+From Pedro's MacBook, agents can inspect the homelab with:
+
+```bash
+ssh pedro-homelab
+```
+
+The Coolify app builds `pedro-boudoux/pyo` from `main` with Nixpacks and starts
+the API through the `Procfile`. Runtime environment variables, including
+`DATABASE_URL`, `LASTFM_API_KEY`, Spotify credentials, and blacklist settings,
+live in Coolify and should be treated as secrets. Verify `DATABASE_URL` in
+Coolify before any DB migration or restore; it may point at Neon until the
+database is intentionally moved.
+
+---
+
 ## Running it locally
 
 ```bash
@@ -82,6 +123,27 @@ psql $DATABASE_URL -f migrations/init.sql
 
 uvicorn app.main:app --reload
 ```
+
+Offline Phase 2 training has a separate dependency so it does not inflate the API
+deployment:
+
+```bash
+pip install -r requirements-jobs.txt
+make train-colisten COLISTEN_ARGS="--env-file .env.prod --workers 8 --beta 0.5"
+```
+
+For production, run this from a separate Coolify scheduled job/worker built from
+the same repo with both `requirements.txt` and `requirements-jobs.txt` installed.
+Let the job inherit `DATABASE_URL` and `COLISTEN_BETA` from Coolify, verify the
+database target before enabling its schedule, and invoke:
+
+```bash
+python -m jobs.train_colisten_embeddings --workers 4 --beta "$COLISTEN_BETA"
+```
+
+The trainer remains density-gated and records every successful run in
+`model_runs`. It is not part of the lean API process and should not be scheduled
+until the first manual production training and independent beta evaluation pass.
 
 You'll need a free Last.fm API key from [last.fm/api](https://www.last.fm/api),
 dropped into a `.env`:

@@ -228,7 +228,7 @@ def repack_vocab(
     # All existing embeddings were built against the old id→slot mapping; null
     # them so /reembed rebuilds every vector against the repacked vocab.
     with get_cursor() as cursor:
-        cursor.execute("UPDATE songs SET embedding = NULL")
+        cursor.execute("UPDATE songs SET embedding = NULL, hybrid_embedding = NULL")
         cursor.execute("SELECT count(*) AS cnt FROM songs")
         nulled = cursor.fetchone()["cnt"]
 

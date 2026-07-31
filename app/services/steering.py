@@ -2,12 +2,14 @@ import numpy as np
 from app.db import get_cursor
 from app.config import STEERING_ALPHA
 from app.services.vector_utils import to_float_list
+from app.services import hybrid
 
 
 def get_rejected_embeddings(seed_track_id: str) -> list:
+    embedding_column = hybrid.active_embedding_column()
     with get_cursor() as cursor:
-        cursor.execute("""
-            SELECT s.embedding
+        cursor.execute(f"""
+            SELECT s.{embedding_column} AS embedding
             FROM feedback f
             JOIN songs s ON f.track_id = s.track_id
             WHERE f.action = 'reject'

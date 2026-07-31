@@ -1,7 +1,7 @@
 import requests
 from app.config import LASTFM_API_KEY
 
-BASE_URL = "http://ws.audioscrobbler.com/2.0"
+BASE_URL = "https://ws.audioscrobbler.com/2.0"
 
 
 def _request(method: str, **params):

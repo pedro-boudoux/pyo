@@ -15,6 +15,32 @@ ceiling is `listeners < 500_000` (`MAX_LISTENERS`).
 
 ---
 
+## Current production backend — read before deploy/runtime changes
+
+- Public API base: `https://pyo-backend.pedroboudoux.com`
+- Health check: `https://pyo-backend.pedroboudoux.com/health`
+- Host/control plane: Coolify on Pedro's homelab.
+- From this MacBook, connect with `ssh pedro-homelab`.
+- Coolify app: `pyo prod`, app id `1`, uuid `y120lq5jmtgobmx27s562roa`.
+- Source: GitHub repo `pedro-boudoux/pyo`, branch `main`, build pack `nixpacks`.
+- Coolify may show the app FQDN as `http://pyo-backend.pedroboudoux.com`; the
+  public browser/API endpoint is the HTTPS URL above through the proxy/Cloudflare.
+- Start command comes from `Procfile`:
+  `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+- Runtime secrets and deployment env live in Coolify, including `DATABASE_URL`,
+  `LASTFM_API_KEY`, Spotify credentials, and `BLACKLIST_ARTISTS`. Treat all values
+  as secrets; never paste full env values into chat or docs.
+- The database is selected by Coolify's `DATABASE_URL`; verify the current value
+  in Coolify before migrations, restores, or destructive DB work. It may still
+  point at Neon until a full DB migration is intentionally performed.
+- Prefer Coolify-managed deploys/restarts/env changes. A direct `docker restart`
+  on the homelab does not apply changed Coolify env vars.
+- If the `manage-coolify-homelab` skill is available, use it for Coolify work. If
+  context is unclear after SSH, read
+  `/Users/pedro/Documents/Projects/homelab/pedro-homelab-access.md` on the MacBook.
+
+---
+
 ## Stack
 
 | Layer | Tool | Why |
@@ -25,7 +51,7 @@ ceiling is `listeners < 500_000` (`MAX_LISTENERS`).
 | Album covers | Deezer + iTunes | Last.fm stopped serving real artist/album images |
 | Embeddings | fastembed (all-MiniLM-L6-v2, ONNX/CPU) + numpy | Encode Last.fm tags into a shared semantic space, then count-weighted average |
 | Vector DB | Postgres + pgvector | ANN search + graph state in one DB |
-| Hosting | Railway (API) + Neon (Postgres) + GitHub Pages (frontend) | Railway runs the FastAPI service via the `Procfile`, Neon is managed Postgres with pgvector, the Vite build is published to GitHub Pages |
+| Hosting | Coolify on `pedro-homelab` (API) + Postgres via `DATABASE_URL` + GitHub Pages (frontend) | Coolify/Nixpacks runs the FastAPI service via the `Procfile`; the database is configured in Coolify; the Vite build is published to GitHub Pages |
 
 ### Dependencies (`requirements.txt`)
 
@@ -171,13 +197,13 @@ yields an all-zero vector, which downstream code guards against. `tag_vocab.id` 
 no longer a vector slot — it's just the row PK; the meaningful column is
 `tag_vocab.embedding` (the cached per-tag MiniLM vector).
 
-> **Phase 2 (in progress) — co-listening half.** Every `getSimilar` result is also
+> **Phase 2 (rollout-gated) — co-listening half.** Every `getSimilar` result is also
 > persisted as a weighted edge in `colisten_edges` (see `services/colisten.py`), pure
 > append-only data collection with zero new Last.fm calls, so a dense co-listening
-> graph accumulates for future node2vec training. It is **not yet blended into the
-> live vector** — `EMBEDDING_DIM` is still `384`. The plan (`NEW_ALGORITHM_IMPLEMENTATION.md`)
-> widens it to `384 + 128 = 512` (`normalize(concat(tag_vec, β·colisten_vec))`) once
-> the graph is dense enough.
+> graph accumulates for weighted random-walk training. The 128-dim trainer,
+> `colisten_embedding`, and 512-dim `hybrid_embedding` are implemented; production
+> remains on the intact 384-dim Stage A column until the density gate and independent
+> beta sweep pass. `RECOMMENDATION_MODEL=hybrid` performs the config-only cutover.
 
 ### ANN search + diversity (recommendations)
 
@@ -286,6 +312,8 @@ CREATE TABLE songs (
     image      TEXT,                   -- resolved album/artist cover URL
     embedding  vector(384),            -- dense semantic tag vector (algorithm 2.0, Phase 1)
     embedding_legacy_300 vector(300),  -- old sparse slot vector, kept for rollback
+    colisten_embedding vector(128),    -- weighted random-walk graph vector (nullable)
+    hybrid_embedding vector(512),      -- normalize(concat(tag, beta * colisten))
     tags       jsonb,                  -- raw blended {tag: count} dict (dominant_tags / /features read this)
     spotify_url        TEXT,           -- cached open.spotify.com link (NULL = none)
     spotify_checked_at TIMESTAMPTZ,    -- when we resolved it (NULL = never looked up)
@@ -294,6 +322,7 @@ CREATE TABLE songs (
 );
 
 CREATE INDEX ON songs USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX ON songs USING hnsw (hybrid_embedding vector_cosine_ops);
 CREATE INDEX ON songs USING gin (name gin_trgm_ops);
 CREATE INDEX ON songs USING gin (artist gin_trgm_ops);
 CREATE INDEX ON songs (canonical_key);   -- variant-folding dedupe lookups
@@ -343,6 +372,17 @@ CREATE TABLE colisten_edges (
 );
 CREATE UNIQUE INDEX ON colisten_edges(source_track_id, target_track_id, source);
 CREATE INDEX ON colisten_edges(source_track_id);
+
+CREATE TABLE model_runs (
+    id BIGSERIAL PRIMARY KEY,
+    model TEXT NOT NULL,
+    trained_at TIMESTAMPTZ DEFAULT now(),
+    node_count BIGINT NOT NULL,
+    edge_count BIGINT NOT NULL,
+    dimension INTEGER,
+    songs_updated INTEGER,
+    params jsonb
+);
 ```
 
 A row in `songs` can exist with `embedding IS NULL` — that's a search-cache hit
@@ -506,8 +546,8 @@ discover/
 ├── requirements.txt
 ├── requirements-dev.txt      # test/dev-only deps (pytest, etc.)
 ├── pyproject.toml
-├── Procfile                  # Railway start command (uvicorn)
-├── .python-version           # pins Python 3.12 for the Railway build
+├── Procfile                  # Coolify/Nixpacks start command (uvicorn)
+├── .python-version           # pins Python 3.12 for the Nixpacks build
 ├── docker-compose.yml        # local Postgres + pgvector
 ├── Makefile
 ├── .env.example
@@ -553,9 +593,13 @@ discover/
 STEERING_ALPHA      = 0.3      # reject steering strength
 MAX_LISTENERS       = 500000   # underground ceiling
 DEFAULT_K           = 10       # default neighbors per query
-EMBEDDING_DIM       = 384      # live songs.embedding dim (Phase 2 widens to 384+128=512)
+EMBEDDING_DIM       = 384      # retained Stage A / instant rollback vector
 TAG_EMBEDDING_DIM   = 384      # semantic tag half (all-MiniLM-L6-v2 output)
 LEGACY_EMBEDDING_DIM = 300     # old sparse vector, kept as embedding_legacy_300 for rollback
+COLISTEN_EMBEDDING_DIM = 128
+HYBRID_EMBEDDING_DIM = 512
+RECOMMENDATION_MODEL = "stage_a"  # set hybrid only after gated eval/backfill
+COLISTEN_BETA       = 0.0      # selected by independent Stage B beta sweep
 TAG_ENCODER_MODEL   = "sentence-transformers/all-MiniLM-L6-v2"  # fastembed ONNX, CPU, no torch
 MMR_LAMBDA          = 0.7      # relevance vs diversity (1.0 = pure relevance)
 MMR_POOL_MULTIPLIER = 3        # over-fetch k × this before re-ranking
@@ -570,7 +614,7 @@ MAINTENANCE_API_KEY = None     # unset disables public access to maintenance rou
 
 ### Rate limiting (`app/ratelimit.py`, issue #20)
 
-A single shared slowapi `Limiter` (keyed by Railway's validated `X-Real-IP`,
+A single shared slowapi `Limiter` (keyed by the proxy-provided `X-Real-IP`,
 falling back to the socket peer locally) guards the public API.
 `app.main` registers it (`app.state.limiter`, the `RateLimitExceeded` → 429
 handler, and `SlowAPIMiddleware`) so `RATE_LIMIT_DEFAULT` applies to **every**
@@ -644,20 +688,31 @@ uvicorn app.main:app --reload
 
 ---
 
-## Deployment (Railway + Neon + GitHub Pages)
+## Deployment (Coolify + Postgres + GitHub Pages)
 
-The API runs on **Railway**, which starts the service from the `Procfile`
-(`web: uvicorn app.main:app --host 0.0.0.0 --port $PORT`) and pins Python 3.12 via
-`.python-version`. The database is **Neon** managed Postgres — enable pgvector once
-(`CREATE EXTENSION IF NOT EXISTS vector;`), though `init_db()` also attempts this on
-startup. Set `LASTFM_API_KEY` and `DATABASE_URL` (the Neon connection string) in the
-Railway service variables.
+The API runs on **Coolify** on Pedro's homelab. From this MacBook, use
+`ssh pedro-homelab` to inspect the host. In Coolify, the production backend is the
+`pyo prod` application (`id=1`, uuid `y120lq5jmtgobmx27s562roa`) built from
+`pedro-boudoux/pyo` on branch `main` with the `nixpacks` build pack. It starts
+from the `Procfile`:
+`web: uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+
+The public API base is `https://pyo-backend.pedroboudoux.com`; verify deployment
+health with `curl -fsS https://pyo-backend.pedroboudoux.com/health`. Coolify may
+display the FQDN with `http://`; public browser traffic should use HTTPS.
+
+The database is whatever Postgres URL Coolify currently stores in `DATABASE_URL`
+for the app. Treat that value as secret and verify it in Coolify before migrations
+or restores. It may still be a Neon managed Postgres URL until a deliberate DB
+migration to a Coolify-managed database is completed.
 
 The **frontend** is built with Vite and published to **GitHub Pages** (live at
-`pedro-boudoux.github.io`); point its API base URL at the Railway service.
+`pedro-boudoux.github.io`). Its fallback API base is
+`https://pyo-backend.pedroboudoux.com` in `frontend/src/api.ts`.
 
-> Migrated off Render (the old `render.yaml` was removed). Free-tier instances may
-> cold-start after idle, so the first request can be slow.
+For production env var changes, redeploys, restarts, logs, or DB moves, use
+Coolify-managed operations rather than ad hoc Docker changes. A direct Docker
+restart will not apply changed Coolify environment variables.
 
 ---
 
@@ -672,9 +727,9 @@ The **frontend** is built with Vite and published to **GitHub Pages** (live at
 - **Tag encoding is cached, per unique tag, in `tag_vocab.embedding`.** Never encode
   per song — the same tags recur across thousands of songs, so `tag_encoder` encodes
   each once and reuses it. The whole backfill is only fast because of that cache.
-- **Embedding dimension is `384` (`all-MiniLM-L6-v2`).** Unlike the old slot model,
+- **The tag dimension is `384` (`all-MiniLM-L6-v2`); the hybrid is `512`.** Unlike the old slot model,
   tags are no longer dropped at a vocab cutoff — every tag contributes to the
-  count-weighted average. Phase 2 widens the stored vector to `512` by concatenating
-  a 128-dim co-listening embedding; if you change the model/dim, update
-  `EMBEDDING_DIM`, `TAG_EMBEDDING_DIM`, the `vector(...)` columns, and re-run
-  `/reembed`. See `NEW_ALGORITHM_IMPLEMENTATION.md` for the full Phase 0–2 plan.
+  count-weighted average. Phase 2 keeps Stage A in `embedding` and builds the 512-dim
+  candidate in `hybrid_embedding`, concatenating a 128-dim co-listening vector. If
+  dimensions change, update all dimension constants and vector columns, then rebuild
+  both tag and hybrid vectors. See `NEW_ALGORITHM_IMPLEMENTATION.md`.

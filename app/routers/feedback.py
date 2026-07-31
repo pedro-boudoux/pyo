@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from app.models import FeedbackRequest, FeedbackResponse
 from app.db import get_cursor
 from app.ratelimit import limiter
-from app.services import steering, embeddings
+from app.services import steering, embeddings, hybrid
 from app.services.vector_utils import to_float_list
 from app.config import DEFAULT_K, RATE_LIMIT_HEAVY
 
@@ -47,8 +47,9 @@ def submit_feedback(request: Request, response: Response, body: FeedbackRequest)
                     ON CONFLICT (source_id, target_id) DO UPDATE SET similarity = EXCLUDED.similarity
                 """, (parent["source_id"], body.track_id, parent["similarity"]))
 
+            embedding_column = hybrid.active_embedding_column()
             cursor.execute(
-                "SELECT embedding FROM songs WHERE track_id = %s",
+                f"SELECT {embedding_column} AS embedding FROM songs WHERE track_id = %s",
                 (body.track_id,)
             )
             song_row = cursor.fetchone()

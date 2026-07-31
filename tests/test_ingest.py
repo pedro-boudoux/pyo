@@ -13,6 +13,8 @@ from unittest.mock import MagicMock, patch, call
 from contextlib import contextmanager
 
 from app.services.embeddings import make_track_id
+from app.config import HYBRID_EMBEDDING_DIM, TAG_EMBEDDING_DIM
+from app.services import hybrid
 from tests.conftest import make_fake_get_cursor
 
 
@@ -20,7 +22,7 @@ from tests.conftest import make_fake_get_cursor
 # Helpers
 # ---------------------------------------------------------------------------
 
-def make_vector(val=0.5, dim=300):
+def make_vector(val=0.5, dim=TAG_EMBEDDING_DIM):
     """Return a list[float] embedding of length `dim`."""
     return [val] * dim
 
@@ -105,7 +107,12 @@ class TestEmbedAndStoreTrackCacheHit:
         assert result["artist"] == artist
         assert result["listeners"] == 10_000
         assert result["image"] == "https://example.com/cover.jpg"
-        assert len(result["embedding"]) == 300
+        expected_dim = (
+            HYBRID_EMBEDDING_DIM
+            if hybrid.active_embedding_column() == "hybrid_embedding"
+            else TAG_EMBEDDING_DIM
+        )
+        assert len(result["embedding"]) == expected_dim
 
     def test_cache_hit_embedding_values_are_floats(self, monkeypatch):
         """embedding list items must be plain Python floats (not numpy scalars)."""
@@ -244,7 +251,8 @@ class TestEmbedAndStoreTrackCacheMiss:
         assert result["artist"] == artist
         assert result["listeners"] == 10_000
         assert result["image"] == "https://cdn.example.com/autechre.jpg"
-        assert result["embedding"] == fake_vec
+        expected = hybrid.compose(fake_vec, None) if hybrid.active_embedding_column() == "hybrid_embedding" else fake_vec
+        assert result["embedding"] == expected
 
     def test_lastfm_pipeline_called(self, monkeypatch):
         """Verify the full blended-tag pipeline is invoked on a cache miss."""
@@ -276,7 +284,8 @@ class TestEmbedAndStoreTrackCacheMiss:
         assert result is not None
         assert result["track_id"] == tid
         assert result["listeners"] == 5_000_000
-        assert result["embedding"] == fake_vec
+        expected = hybrid.compose(fake_vec, None) if hybrid.active_embedding_column() == "hybrid_embedding" else fake_vec
+        assert result["embedding"] == expected
 
     def test_cache_miss_row_exists_but_embedding_none_reruns_pipeline(self, monkeypatch):
         """
@@ -330,7 +339,8 @@ class TestEmbedAndStoreTrackCacheMiss:
 
         assert result is not None
         assert result["track_id"] == tid
-        assert result["embedding"] == fake_vec
+        expected = hybrid.compose(fake_vec, None) if hybrid.active_embedding_column() == "hybrid_embedding" else fake_vec
+        assert result["embedding"] == expected
 
 
 # ---------------------------------------------------------------------------

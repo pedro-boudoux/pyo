@@ -1,7 +1,7 @@
 from psycopg2.extras import Json
 
 from app.db import get_cursor
-from app.services import lastfm, embeddings
+from app.services import lastfm, embeddings, hybrid
 from app.services.covers import get_cover_url
 from app.services.vector_utils import to_float_list
 
@@ -22,19 +22,31 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
 
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT track_id, name, artist, listeners, image, embedding, tags FROM songs WHERE track_id = %s",
+            """SELECT track_id, name, artist, listeners, image, embedding,
+                      colisten_embedding, hybrid_embedding, tags
+               FROM songs WHERE track_id = %s""",
             (track_id,),
         )
         row = cursor.fetchone()
 
     if row and row["embedding"] is not None:
+        active_embedding = hybrid.embedding_from_row(row)
+        if (
+            hybrid.active_embedding_column() == "hybrid_embedding"
+            and row.get("hybrid_embedding") is None
+        ):
+            with get_cursor() as cursor:
+                cursor.execute(
+                    "UPDATE songs SET hybrid_embedding = %s WHERE track_id = %s",
+                    (active_embedding, track_id),
+                )
         return {
             "track_id": track_id,
             "name": row["name"],
             "artist": row["artist"],
             "listeners": row["listeners"],
             "image": row["image"],
-            "embedding": to_float_list(row["embedding"]),
+            "embedding": active_embedding,
             "tags": row["tags"] or {},
         }
 
@@ -65,19 +77,27 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
     # the raw {tag: count} dict in songs.tags because a dense averaged vector can't be
     # inverted back to discrete tags (dominant_tags / /features read it from there).
     vector = embeddings.build_tag_vector(tag_counts)
+    hybrid_vector = hybrid.compose(vector, row.get("colisten_embedding") if row else None)
     image = get_cover_url(artist, name)
 
     with get_cursor() as cursor:
         cursor.execute("""
-            INSERT INTO songs (track_id, name, artist, listeners, embedding, image, canonical_key, tags)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO songs (
+                track_id, name, artist, listeners, embedding, hybrid_embedding,
+                image, canonical_key, tags
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (track_id) DO UPDATE SET
                 listeners = EXCLUDED.listeners,
                 embedding = EXCLUDED.embedding,
+                hybrid_embedding = EXCLUDED.hybrid_embedding,
                 image = COALESCE(EXCLUDED.image, songs.image),
                 canonical_key = EXCLUDED.canonical_key,
                 tags = EXCLUDED.tags
-        """, (track_id, name, artist, info["listeners"], vector, image, canonical_key, Json(tag_counts)))
+        """, (
+            track_id, name, artist, info["listeners"], vector, hybrid_vector,
+            image, canonical_key, Json(tag_counts),
+        ))
 
     return {
         "track_id": track_id,
@@ -85,6 +105,6 @@ def embed_and_store_track(artist: str, name: str) -> dict | None:
         "artist": artist,
         "listeners": info["listeners"],
         "image": image,
-        "embedding": vector,
+        "embedding": hybrid_vector if hybrid.active_embedding_column() == "hybrid_embedding" else vector,
         "tags": tag_counts,
     }

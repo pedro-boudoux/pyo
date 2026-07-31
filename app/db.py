@@ -2,7 +2,14 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 from pgvector.psycopg2 import register_vector
-from app.config import DATABASE_URL, EMBEDDING_DIM, TAG_EMBEDDING_DIM, LEGACY_EMBEDDING_DIM
+from app.config import (
+    DATABASE_URL,
+    EMBEDDING_DIM,
+    TAG_EMBEDDING_DIM,
+    LEGACY_EMBEDDING_DIM,
+    COLISTEN_EMBEDDING_DIM,
+    HYBRID_EMBEDDING_DIM,
+)
 
 
 def get_connection():
@@ -101,6 +108,8 @@ def init_db():
                 listeners  INTEGER,
                 image      TEXT,
                 embedding  vector({EMBEDDING_DIM}),
+                colisten_embedding vector({COLISTEN_EMBEDDING_DIM}),
+                hybrid_embedding   vector({HYBRID_EMBEDDING_DIM}),
                 tags       jsonb,
                 spotify_url        TEXT,
                 spotify_checked_at TIMESTAMPTZ,
@@ -162,6 +171,19 @@ def init_db():
             )
         """)
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS model_runs (
+                id            BIGSERIAL PRIMARY KEY,
+                model         TEXT NOT NULL,
+                trained_at    TIMESTAMPTZ DEFAULT now(),
+                node_count    BIGINT NOT NULL,
+                edge_count    BIGINT NOT NULL,
+                dimension     INTEGER,
+                songs_updated INTEGER,
+                params        jsonb
+            )
+        """)
+
     # Migrations — each runs in its own transaction so one failure doesn't block the rest
     _try("ALTER TABLE songs RENAME COLUMN spotify_id TO track_id")
     _try("ALTER TABLE graph_nodes RENAME COLUMN spotify_id TO track_id")
@@ -189,10 +211,17 @@ def init_db():
     _try("ALTER TABLE songs ADD COLUMN IF NOT EXISTS tags jsonb")
     _try(f"ALTER TABLE tag_vocab ADD COLUMN IF NOT EXISTS embedding vector({TAG_EMBEDDING_DIM})")
 
+    # Algorithm 2.0, Phase 2. Keep the signed-off Stage A vector in `embedding`
+    # and build the candidate hybrid in a separate column. RECOMMENDATION_MODEL
+    # controls the read path, so rollout and rollback are configuration-only.
+    _try(f"ALTER TABLE songs ADD COLUMN IF NOT EXISTS colisten_embedding vector({COLISTEN_EMBEDDING_DIM})")
+    _try(f"ALTER TABLE songs ADD COLUMN IF NOT EXISTS hybrid_embedding vector({HYBRID_EMBEDDING_DIM})")
+
     # Ensure unique constraints and indexes exist regardless of how the table was created
     _try("CREATE UNIQUE INDEX IF NOT EXISTS songs_track_id_unique ON songs(track_id)")
     _try("CREATE UNIQUE INDEX IF NOT EXISTS graph_nodes_track_id_unique ON graph_nodes(track_id)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_embedding ON songs USING hnsw (embedding vector_cosine_ops)")
+    _try("CREATE INDEX IF NOT EXISTS idx_songs_hybrid_embedding ON songs USING hnsw (hybrid_embedding vector_cosine_ops)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_canonical_key ON songs(canonical_key)")
     _try("CREATE UNIQUE INDEX IF NOT EXISTS idx_graph_edges_source_target ON graph_edges(source_id, target_id)")
 

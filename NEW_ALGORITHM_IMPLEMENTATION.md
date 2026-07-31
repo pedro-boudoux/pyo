@@ -204,7 +204,7 @@ dissolves.
     can be simplified substantially. Remove only what the eval confirms is now redundant.
 
 19. **Schedule periodic retraining.** Graph embeddings drift as the graph grows. Add a
-    weekly/biweekly node2vec rerun (cron or a Render scheduled job). Update `model_runs`
+    weekly/biweekly node2vec rerun (cron, GitHub Actions, or a Coolify-managed job/worker). Update `model_runs`
     each time. Backfilling `colisten_embedding` gets more expensive as the table grows —
     batch it.
 

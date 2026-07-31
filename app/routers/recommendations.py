@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query, HTTPException, Request, Response
 from app.models import RecommendationsResponse, Recommendation
 from app.db import get_cursor
 from app.ratelimit import limiter
-from app.services import steering, lastfm, ingest, embeddings, colisten, blacklist
+from app.services import steering, lastfm, ingest, embeddings, colisten, blacklist, hybrid
 from app.services.embeddings import mmr_rerank
 from app.services.vector_utils import to_float_list
 from app.config import DEFAULT_K, MMR_LAMBDA, MMR_POOL_MULTIPLIER, MMR_MAX_PER_ARTIST, RATE_LIMIT_HEAVY
@@ -118,9 +118,10 @@ def build_recommendations(
     exclude = exclude or []
     exclude_artists = exclude_artists or []
 
+    embedding_column = hybrid.active_embedding_column()
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT name, artist, embedding FROM songs WHERE track_id = %s",
+            f"SELECT name, artist, {embedding_column} AS embedding FROM songs WHERE track_id = %s",
             (track_id,)
         )
         row = cursor.fetchone()

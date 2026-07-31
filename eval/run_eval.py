@@ -53,6 +53,7 @@ _preload_env_file(sys.argv[1:])
 from app.config import DEFAULT_K, MMR_LAMBDA
 from app.db import get_cursor
 from app.services.vector_utils import to_float_list
+from app.services import hybrid
 from eval import ground_truth, metrics
 
 # Imported lazily-safe: this is the undecorated recommendation pipeline, not the
@@ -64,9 +65,12 @@ from app.routers.recommendations import build_recommendations
 def _embeddings_for(track_ids: list[str]) -> dict[str, list]:
     if not track_ids:
         return {}
+    embedding_column = hybrid.active_embedding_column()
     with get_cursor() as cursor:
         cursor.execute(
-            "SELECT track_id, embedding FROM songs WHERE track_id = ANY(%s) AND embedding IS NOT NULL",
+            f"""SELECT track_id, {embedding_column} AS embedding
+                FROM songs
+                WHERE track_id = ANY(%s) AND {embedding_column} IS NOT NULL""",
             (track_ids,),
         )
         return {r["track_id"]: to_float_list(r["embedding"]) for r in cursor.fetchall()}

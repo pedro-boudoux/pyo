@@ -4,6 +4,13 @@ Visual reference for how the Underground Music Discovery backend actually works
 (grounded in the code under `app/`, not just the original plan).
 
 > **Heads up — a few things to know up front:**
+> - **Production API is on Coolify, not Railway.** Public base:
+>   `https://pyo-backend.pedroboudoux.com`; health:
+>   `https://pyo-backend.pedroboudoux.com/health`. From Pedro's MacBook, use
+>   `ssh pedro-homelab` to inspect the Coolify host. The Coolify app is
+>   `pyo prod` (`id=1`, uuid `y120lq5jmtgobmx27s562roa`) built from
+>   `pedro-boudoux/pyo` branch `main` with Nixpacks. Treat Coolify env values,
+>   especially `DATABASE_URL`, as secrets.
 > - **Spotify plays no part in search, embeddings, or recommendations.** Its one
 >   narrow role is resolving a public "listen on Spotify" link
 >   (`services/spotify.py`, client-credentials flow) via `GET /songs/{id}/spotify`
@@ -19,8 +26,10 @@ Visual reference for how the Underground Music Discovery backend actually works
 >   Last.fm tag is encoded with `all-MiniLM-L6-v2` (`fastembed`, ONNX/CPU) and a
 >   track's `vector(384)` is the count-weighted average of its tag vectors. This
 >   replaced the old sparse `vector(300)` slot model (kept per row as
->   `embedding_legacy_300` for rollback). Phase 2 collects co-listening edges
->   (`colisten_edges`) toward a future 512-dim hybrid — see `NEW_ALGORITHM_IMPLEMENTATION.md`.
+>   `embedding_legacy_300` for rollback). Phase 2 stores learned graph vectors in
+>   `colisten_embedding` and builds a separately indexed `hybrid_embedding`
+>   (`vector(512)`). `RECOMMENDATION_MODEL` switches the read path, leaving Stage A
+>   intact for instant rollback — see `NEW_ALGORITHM_IMPLEMENTATION.md`.
 
 ## Two shared building blocks
 

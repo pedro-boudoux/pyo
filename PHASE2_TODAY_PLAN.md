@@ -161,6 +161,8 @@ Notes:
 
 ## Step 4 — Add Phase 2 Schema
 
+Status: implemented in code; deployment pending.
+
 Purpose: create storage for trained co-listening vectors and model run metadata.
 
 Add to `init_db()` and `migrations/init.sql`:
@@ -177,6 +179,9 @@ Add to `init_db()` and `migrations/init.sql`:
 Also fix stale `migrations/init.sql`, which still describes the old sparse schema.
 
 ## Step 5 — Build Node2vec Training Job
+
+Status: implemented as a density-gated weighted DeepWalk/skip-gram trainer;
+production training waits for the graph gate.
 
 Purpose: turn `colisten_edges` into 128-dim per-track graph embeddings.
 
@@ -200,6 +205,9 @@ Important:
 
 ## Step 6 — Add Independent Stage B Eval
 
+Status: blocked on the independent human/playlist-derived fixture. The eval runner
+already accepts `--ground-truth`, and `eval/sweep_beta.py` enforces this fixture.
+
 Purpose: avoid circular grading. Stage B is trained from Last.fm-style similarity edges,
 so it should not be judged only against Last.fm `getSimilar`.
 
@@ -217,6 +225,16 @@ Acceptable sources:
 Do not use Last.fm `getSimilar` as the only Stage B ground truth.
 
 ## Step 7 — Wire Hybrid Vector, Sweep Beta, Commit Result
+
+Status: hybrid storage/composition, zero fallback, HNSW index, model switch, rebuild
+job, and sweep command are implemented. Choosing beta and enabling production remain
+gated on Step 6 and the production training run.
+
+Periodic retraining belongs in a separate Coolify scheduled job/worker built from
+this repo with `requirements.txt` plus `requirements-jobs.txt`. It should inherit
+`DATABASE_URL` and the chosen `COLISTEN_BETA` from Coolify. Verify the database
+target and complete the first manual production training plus independent beta
+evaluation before enabling the schedule.
 
 Purpose: move from collected graph vectors to the live hybrid model.
 

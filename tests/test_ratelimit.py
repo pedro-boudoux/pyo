@@ -50,7 +50,7 @@ def _make_app(default="100/minute", heavy="2/minute"):
 
 
 class TestClientIp:
-    def test_prefers_railway_real_ip(self):
+    def test_prefers_proxy_real_ip(self):
         req = type("R", (), {"headers": {"x-real-ip": "2001:0db8::1"}, "client": None})()
         assert client_ip(req) == "2001:db8::1"
 
@@ -136,7 +136,7 @@ def test_all_production_limited_routes_accept_response_for_header_injection():
 
 def test_real_app_decorated_route_emits_headers(monkeypatch):
     """Exercise a production router with the production limiter configured the
-    way Railway runs it; the original throwaway test missed this 500 path."""
+    way the production proxy runs it; the original throwaway test missed this 500 path."""
     from app.main import app
     from app.routers import songs
 

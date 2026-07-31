@@ -3,7 +3,7 @@ import re
 import numpy as np
 from app.db import get_cursor
 from app.config import EMBEDDING_DIM, TAG_EMBEDDING_DIM, DEFAULT_K
-from app.services import tag_encoder
+from app.services import tag_encoder, hybrid
 from app.services.vector_utils import to_float_list
 
 
@@ -207,15 +207,17 @@ def ann_search(
     use_cap = listeners_cap < float("inf")
     cap_clause = "AND listeners < %s" if use_cap else ""
     allowed_clause = "AND track_id = ANY(%s)" if use_allowed else ""
+    embedding_column = hybrid.active_embedding_column()
     sql = f"""
-        SELECT track_id, name, artist, listeners, image, embedding,
-               1 - (embedding <=> %s::vector) AS similarity
+        SELECT track_id, name, artist, listeners, image,
+               {embedding_column} AS embedding,
+               1 - ({embedding_column} <=> %s::vector) AS similarity
         FROM songs
-        WHERE embedding IS NOT NULL
+        WHERE {embedding_column} IS NOT NULL
           {cap_clause}
           AND track_id != ALL(%s)
           {allowed_clause}
-        ORDER BY embedding <=> %s::vector
+        ORDER BY {embedding_column} <=> %s::vector
         LIMIT %s
     """
     params = [embedding]
