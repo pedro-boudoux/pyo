@@ -95,8 +95,15 @@ Proceed to Step 3 and grow `colisten_edges`.
 
 Purpose: collect enough Last.fm `track.getSimilar` edges for meaningful graph embeddings.
 
-Status: in progress. Smoke crawl and larger crawls succeeded; graph has enough nodes
-but still needs more average degree before production node2vec training.
+Status: density gate met on the live Coolify database July 31, 2026. The corrected
+MacBook crawl remains in progress to build margin above the minimum.
+
+Live gate crossing:
+
+- `nodes`: 129293
+- `edges`: 517317
+- `avg_degree`: 8.0
+- Density gate: ready
 
 Smoke crawl result captured July 2026:
 
@@ -129,13 +136,15 @@ Crawler speed-up added during Step 3:
 
 - `jobs/crawl_colisten.py` now accepts `--workers` for parallel Last.fm requests.
 - A shared rate limiter still spaces request starts by `--delay`.
-- Parallel mode batches `colisten_edges` upserts to reduce Neon connection/write overhead.
+- Parallel mode batches `colisten_edges` upserts to reduce Postgres connection/write overhead.
+- Successful zero-result calls are persisted in `colisten_crawl_state`, so reruns
+  skip empty tracks instead of burning the same Last.fm calls forever.
 - `--env-file .env.prod` is supported directly by the crawler CLI.
 
 Recommended next command:
 
 ```bash
-.venv/bin/python -m jobs.crawl_colisten --env-file .env.prod --max-depth 2 --similar-limit 50 --max-calls 5000 --per-level-cap 2000 --delay 0.2 --workers 8 --batch-size 2000
+.venv/bin/python -m jobs.crawl_colisten --env-file .env.prod --max-depth 2 --similar-limit 50 --max-calls 5000 --per-level-cap 2000 --delay 0.2 --workers 8 --batch-size 100
 ```
 
 If an old sequential crawl is still running, it can be stopped with `Ctrl+C`; rerunning
@@ -156,7 +165,7 @@ Notes:
 
 - This writes only to `colisten_edges`.
 - It does not embed songs or write to `songs`.
-- It is resumable: already-crawled source track IDs are skipped.
+- It is resumable: edge-producing sources and successful empty calls are skipped.
 - Re-check `colisten.graph_stats()` after each run.
 
 ## Step 4 — Add Phase 2 Schema
