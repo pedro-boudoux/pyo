@@ -161,7 +161,10 @@ Notes:
 
 ## Step 4 — Add Phase 2 Schema
 
-Status: implemented in code; deployment pending.
+Status: deployed through Coolify on July 31, 2026. The additive
+`colisten_embedding`, `hybrid_embedding`, `model_runs`, and hybrid HNSW index are
+present. `RECOMMENDATION_MODEL` is unset in Coolify, so production remains on the
+safe `stage_a` default. Health and a real song search passed after deployment.
 
 Purpose: create storage for trained co-listening vectors and model run metadata.
 
@@ -181,7 +184,9 @@ Also fix stale `migrations/init.sql`, which still describes the old sparse schem
 ## Step 5 — Build Node2vec Training Job
 
 Status: implemented as a density-gated weighted DeepWalk/skip-gram trainer;
-production training waits for the graph gate.
+production training waits for the graph gate. A Python 3.12 `.venv-train` is
+prepared locally, `Dockerfile.training` defines the separate Coolify worker image,
+and `--check-density` verifies the gate without loading edges or training.
 
 Purpose: turn `colisten_edges` into 128-dim per-track graph embeddings.
 
@@ -205,13 +210,25 @@ Important:
 
 ## Step 6 — Add Independent Stage B Eval
 
-Status: blocked on the independent human/playlist-derived fixture. The eval runner
-already accepts `--ground-truth`, and `eval/sweep_beta.py` enforces this fixture.
+Status: complete. `eval/ground_truth_colisten.json` contains 100 seeds derived
+from nearby cross-artist tracks in 31 independently curated public Deezer
+playlists (92 unique seed artists). It does not use Last.fm `getSimilar`.
+`eval/sweep_beta.py` validates the fixture provenance before changing vectors.
+
+Stage A reference result against this fixture:
+
+- Coverage: 100 / 100
+- Recall@10: 0.0403
+- MRR: 0.0336
+- Intra-list distance: 0.0273
+- Median listeners: 374,160
+
+Recorded in `eval/baselines/stage_a_deezer_fixture.json`.
 
 Purpose: avoid circular grading. Stage B is trained from Last.fm-style similarity edges,
 so it should not be judged only against Last.fm `getSimilar`.
 
-Needed:
+Artifacts:
 
 - `eval/ground_truth_colisten.json`
 - Eval command using `--ground-truth eval/ground_truth_colisten.json`
@@ -223,6 +240,12 @@ Acceptable sources:
 - Playlist co-occurrence from a non-Last.fm source.
 
 Do not use Last.fm `getSimilar` as the only Stage B ground truth.
+
+Operational correction: the MacBook's `.env.prod` currently points to the old
+Neon database, while the live Coolify API uses its private homelab Postgres
+service. At verification time the live graph had 102,090 nodes, 373,217 edges,
+and average degree 7.31. Production training must inherit `DATABASE_URL` from
+Coolify; do not train the Neon graph by accident.
 
 ## Step 7 — Wire Hybrid Vector, Sweep Beta, Commit Result
 

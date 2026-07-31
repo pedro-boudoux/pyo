@@ -544,6 +544,7 @@ discover/
 ├── ARCHITECTURE.md           # Mermaid diagrams of every flow
 ├── README.md
 ├── requirements.txt
+├── requirements-jobs.txt     # Phase 2 trainer-only dependency (gensim)
 ├── requirements-dev.txt      # test/dev-only deps (pytest, etc.)
 ├── pyproject.toml
 ├── Procfile                  # Coolify/Nixpacks start command (uvicorn)
@@ -580,8 +581,10 @@ discover/
 │       └── covers.py         # Deezer/iTunes cover resolution
 │
 ├── jobs/
-│   └── crawl_colisten.py     # offline co-listening graph crawl (algorithm 2.0, Phase 2)
-├── eval/                     # offline eval harness (recall@k, MRR, diversity, listener health)
+│   ├── crawl_colisten.py     # offline co-listening graph crawl (algorithm 2.0, Phase 2)
+│   └── train_colisten_embeddings.py # density-gated weighted random-walk trainer
+├── eval/                     # offline eval harness + independent Stage B fixture
+├── Dockerfile.training       # separate Python 3.12 trainer image; not the API image
 └── frontend/                 # React + Vite + ReactFlow graph UI
 ```
 

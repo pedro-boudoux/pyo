@@ -1,0 +1,1509 @@
+{
+  "source": "deezer_public_playlist_adjacency",
+  "independent_from_lastfm": true,
+  "generated_at": "2026-07-31T22:41:35.981700+00:00",
+  "method": {
+    "description": "nearby cross-artist tracks in independently curated public playlists",
+    "window": 5,
+    "target_limit": 10,
+    "min_targets": 3,
+    "playlists_per_query": 4,
+    "max_tracks_per_playlist": 250
+  },
+  "queries": [
+    "ambient electronic",
+    "brazilian indie",
+    "cloud rap",
+    "darkwave",
+    "dream pop",
+    "drum and bass",
+    "experimental electronic",
+    "indie folk",
+    "jazz rap",
+    "math rock",
+    "mpb",
+    "neo soul",
+    "noise rock",
+    "post punk",
+    "psychedelic rock",
+    "shoegaze",
+    "slowcore",
+    "trip hop",
+    "underground hip hop"
+  ],
+  "playlists": [
+    {
+      "id": "10599416182",
+      "title": "safe place",
+      "track_count": 50,
+      "queries": [
+        "dream pop"
+      ],
+      "matched_tracks": 13
+    },
+    {
+      "id": "11669494584",
+      "title": "japanese math rock to listen to while strolling ar",
+      "track_count": 106,
+      "queries": [
+        "math rock"
+      ],
+      "matched_tracks": 10
+    },
+    {
+      "id": "13021028043",
+      "title": "slowcore",
+      "track_count": 71,
+      "queries": [
+        "slowcore"
+      ],
+      "matched_tracks": 10
+    },
+    {
+      "id": "13114405263",
+      "title": "devastating slowcore/sadcore",
+      "track_count": 107,
+      "queries": [
+        "slowcore"
+      ],
+      "matched_tracks": 14
+    },
+    {
+      "id": "13315725563",
+      "title": "Noise Rock / Postpunk / Shoegaze / Krautrock ...",
+      "track_count": 3539,
+      "queries": [
+        "noise rock"
+      ],
+      "matched_tracks": 14
+    },
+    {
+      "id": "14356701561",
+      "title": "Math Rock",
+      "track_count": 69,
+      "queries": [
+        "math rock"
+      ],
+      "matched_tracks": 12
+    },
+    {
+      "id": "14822848223",
+      "title": "best of shoegaze hoedown",
+      "track_count": 352,
+      "queries": [
+        "shoegaze"
+      ],
+      "matched_tracks": 13
+    },
+    {
+      "id": "15372034163",
+      "title": "disgustingly sad slowcore songs",
+      "track_count": 211,
+      "queries": [
+        "slowcore"
+      ],
+      "matched_tracks": 13
+    },
+    {
+      "id": "15506256381",
+      "title": "hygge brazilian indie thursday evening",
+      "track_count": 50,
+      "queries": [
+        "brazilian indie"
+      ],
+      "matched_tracks": 5
+    },
+    {
+      "id": "1595665625",
+      "title": "Chill to Folk",
+      "track_count": 100,
+      "queries": [
+        "indie folk"
+      ],
+      "matched_tracks": 6
+    },
+    {
+      "id": "1750314842",
+      "title": "Indie Folk",
+      "track_count": 90,
+      "queries": [
+        "indie folk"
+      ],
+      "matched_tracks": 11
+    },
+    {
+      "id": "1840772682",
+      "title": "Neo Soul Hits",
+      "track_count": 64,
+      "queries": [
+        "neo soul"
+      ],
+      "matched_tracks": 4
+    },
+    {
+      "id": "1996494362",
+      "title": "Rap Bangers",
+      "track_count": 51,
+      "queries": [
+        "cloud rap"
+      ],
+      "matched_tracks": 8
+    },
+    {
+      "id": "2754758028",
+      "title": "Deep/Tech House & Indie Dance & Nu Disco & Brazilian Bass",
+      "track_count": 294,
+      "queries": [
+        "brazilian indie"
+      ],
+      "matched_tracks": 5
+    },
+    {
+      "id": "282031181",
+      "title": "PSYCHE ROCK 60's ft. The Byrds",
+      "track_count": 75,
+      "queries": [
+        "psychedelic rock"
+      ],
+      "matched_tracks": 4
+    },
+    {
+      "id": "3033941182",
+      "title": "Jazzy Hip-Hop",
+      "track_count": 80,
+      "queries": [
+        "jazz rap"
+      ],
+      "matched_tracks": 4
+    },
+    {
+      "id": "3126664682",
+      "title": "Rock Road Trip",
+      "track_count": 80,
+      "queries": [
+        "trip hop"
+      ],
+      "matched_tracks": 17
+    },
+    {
+      "id": "556502217",
+      "title": "Cl\u00e1ssicos da MPB",
+      "track_count": 50,
+      "queries": [
+        "mpb"
+      ],
+      "matched_tracks": 21
+    },
+    {
+      "id": "5691936222",
+      "title": "MPB Anos 90",
+      "track_count": 50,
+      "queries": [
+        "mpb"
+      ],
+      "matched_tracks": 9
+    },
+    {
+      "id": "5691936982",
+      "title": "MPB Anos 80",
+      "track_count": 40,
+      "queries": [
+        "mpb"
+      ],
+      "matched_tracks": 12
+    },
+    {
+      "id": "7646884442",
+      "title": "Brazilian Indie \ud83c\udde7\ud83c\uddf7",
+      "track_count": 32,
+      "queries": [
+        "brazilian indie"
+      ],
+      "matched_tracks": 4
+    },
+    {
+      "id": "8370474122",
+      "title": "you're dreaming",
+      "track_count": 50,
+      "queries": [
+        "dream pop",
+        "shoegaze"
+      ],
+      "matched_tracks": 11
+    },
+    {
+      "id": "8378717602",
+      "title": "Groove happy hour Soul funk pop Jazz Rap",
+      "track_count": 427,
+      "queries": [
+        "jazz rap"
+      ],
+      "matched_tracks": 5
+    },
+    {
+      "id": "8515679522",
+      "title": "New Wave Essentials",
+      "track_count": 50,
+      "queries": [
+        "darkwave"
+      ],
+      "matched_tracks": 33
+    },
+    {
+      "id": "861202821",
+      "title": "Pop Punk Essentials",
+      "track_count": 50,
+      "queries": [
+        "post punk"
+      ],
+      "matched_tracks": 16
+    },
+    {
+      "id": "8672358522",
+      "title": "Post-Punk 2.0",
+      "track_count": 50,
+      "queries": [
+        "post punk"
+      ],
+      "matched_tracks": 7
+    },
+    {
+      "id": "8700369282",
+      "title": "Post-Punk Essentials",
+      "track_count": 50,
+      "queries": [
+        "darkwave",
+        "post punk"
+      ],
+      "matched_tracks": 11
+    },
+    {
+      "id": "8882712362",
+      "title": "Dreampop",
+      "track_count": 50,
+      "queries": [
+        "shoegaze"
+      ],
+      "matched_tracks": 9
+    },
+    {
+      "id": "924107415",
+      "title": "Playlist Chinese Man's selection",
+      "track_count": 136,
+      "queries": [
+        "trip hop"
+      ],
+      "matched_tracks": 4
+    },
+    {
+      "id": "959141815",
+      "title": "Bedroom Pop",
+      "track_count": 49,
+      "queries": [
+        "dream pop"
+      ],
+      "matched_tracks": 8
+    },
+    {
+      "id": "9722149622",
+      "title": "Sensual Massage - Slowcore",
+      "track_count": 249,
+      "queries": [
+        "slowcore"
+      ],
+      "matched_tracks": 27
+    }
+  ],
+  "seeds": [
+    {
+      "seed_track_id": "26a8ce1a9dbb35df8c3c",
+      "name": "Love My Way",
+      "artist": "The Psychedelic Furs",
+      "targets": [
+        "64a689f61e8c839408a8",
+        "d72b710416a5cd7e356b",
+        "1387e974f1f2d4f45fc2",
+        "9829da728c64acb4132d",
+        "0459b1098ceb577b660d",
+        "683911930431b45583f6",
+        "ee493c79544efb9a3f42",
+        "cc79e993288694a6408b",
+        "d6ebf7228ec9e0ed965e",
+        "e236f4c35dfdf883cd90"
+      ]
+    },
+    {
+      "seed_track_id": "923e85f553c3fdbe5ae6",
+      "name": "Love Will Tear Us Apart",
+      "artist": "Joy Division",
+      "targets": [
+        "b1a3179bf3800bce5129",
+        "e6ec8d2da318ae89246c",
+        "07e303b65caa5ce9123f",
+        "0f3dea69b1a0786e38be",
+        "f1923c8bcaa6e80fff3e",
+        "a6f6288606708c75c9b9",
+        "4b0d3c9d6fbfc41a87b3",
+        "8264b8647701ee62b79a",
+        "3184e4deb5ca145059b7"
+      ]
+    },
+    {
+      "seed_track_id": "0459b1098ceb577b660d",
+      "name": "Town Called Malice",
+      "artist": "The Jam",
+      "targets": [
+        "9829da728c64acb4132d",
+        "d6ebf7228ec9e0ed965e",
+        "1387e974f1f2d4f45fc2",
+        "8264b8647701ee62b79a",
+        "d72b710416a5cd7e356b",
+        "26a8ce1a9dbb35df8c3c",
+        "a6f6288606708c75c9b9",
+        "0f3dea69b1a0786e38be",
+        "64a689f61e8c839408a8"
+      ]
+    },
+    {
+      "seed_track_id": "a6f6288606708c75c9b9",
+      "name": "Bigmouth Strikes Again (2017 Master)",
+      "artist": "The Smiths",
+      "targets": [
+        "0f3dea69b1a0786e38be",
+        "8264b8647701ee62b79a",
+        "e6ec8d2da318ae89246c",
+        "923e85f553c3fdbe5ae6",
+        "d6ebf7228ec9e0ed965e",
+        "0459b1098ceb577b660d",
+        "b1a3179bf3800bce5129",
+        "07e303b65caa5ce9123f",
+        "9829da728c64acb4132d"
+      ]
+    },
+    {
+      "seed_track_id": "8264b8647701ee62b79a",
+      "name": "Too Shy",
+      "artist": "Kajagoogoo",
+      "targets": [
+        "a6f6288606708c75c9b9",
+        "0f3dea69b1a0786e38be",
+        "d6ebf7228ec9e0ed965e",
+        "0459b1098ceb577b660d",
+        "e6ec8d2da318ae89246c",
+        "923e85f553c3fdbe5ae6",
+        "9829da728c64acb4132d",
+        "1387e974f1f2d4f45fc2",
+        "b1a3179bf3800bce5129"
+      ]
+    },
+    {
+      "seed_track_id": "d6ebf7228ec9e0ed965e",
+      "name": "Dancing with Tears in My Eyes",
+      "artist": "Ultravox",
+      "targets": [
+        "0459b1098ceb577b660d",
+        "8264b8647701ee62b79a",
+        "9829da728c64acb4132d",
+        "1387e974f1f2d4f45fc2",
+        "a6f6288606708c75c9b9",
+        "0f3dea69b1a0786e38be",
+        "d72b710416a5cd7e356b",
+        "26a8ce1a9dbb35df8c3c",
+        "e6ec8d2da318ae89246c"
+      ]
+    },
+    {
+      "seed_track_id": "0f3dea69b1a0786e38be",
+      "name": "This Is The Day",
+      "artist": "The The",
+      "targets": [
+        "a6f6288606708c75c9b9",
+        "e6ec8d2da318ae89246c",
+        "8264b8647701ee62b79a",
+        "923e85f553c3fdbe5ae6",
+        "b1a3179bf3800bce5129",
+        "07e303b65caa5ce9123f",
+        "d6ebf7228ec9e0ed965e",
+        "0459b1098ceb577b660d"
+      ]
+    },
+    {
+      "seed_track_id": "9829da728c64acb4132d",
+      "name": "Smalltown Boy",
+      "artist": "Bronski Beat",
+      "targets": [
+        "0459b1098ceb577b660d",
+        "1387e974f1f2d4f45fc2",
+        "d6ebf7228ec9e0ed965e",
+        "d72b710416a5cd7e356b",
+        "26a8ce1a9dbb35df8c3c",
+        "64a689f61e8c839408a8",
+        "8264b8647701ee62b79a",
+        "a6f6288606708c75c9b9"
+      ]
+    },
+    {
+      "seed_track_id": "64a689f61e8c839408a8",
+      "name": "Rock the Casbah - remastered",
+      "artist": "The Clash",
+      "targets": [
+        "26a8ce1a9dbb35df8c3c",
+        "d72b710416a5cd7e356b",
+        "1387e974f1f2d4f45fc2",
+        "683911930431b45583f6",
+        "9829da728c64acb4132d",
+        "e236f4c35dfdf883cd90",
+        "0459b1098ceb577b660d",
+        "673e0b4a99238dd4eff4"
+      ]
+    },
+    {
+      "seed_track_id": "1387e974f1f2d4f45fc2",
+      "name": "Boys Don't Cry",
+      "artist": "The Cure",
+      "targets": [
+        "9829da728c64acb4132d",
+        "d72b710416a5cd7e356b",
+        "0459b1098ceb577b660d",
+        "26a8ce1a9dbb35df8c3c",
+        "64a689f61e8c839408a8",
+        "d6ebf7228ec9e0ed965e",
+        "8264b8647701ee62b79a"
+      ]
+    },
+    {
+      "seed_track_id": "e6ec8d2da318ae89246c",
+      "name": "Cars",
+      "artist": "Gary Numan",
+      "targets": [
+        "0f3dea69b1a0786e38be",
+        "923e85f553c3fdbe5ae6",
+        "a6f6288606708c75c9b9",
+        "b1a3179bf3800bce5129",
+        "07e303b65caa5ce9123f",
+        "8264b8647701ee62b79a",
+        "d6ebf7228ec9e0ed965e"
+      ]
+    },
+    {
+      "seed_track_id": "d72b710416a5cd7e356b",
+      "name": "Just Can't Get Enough",
+      "artist": "Depeche Mode",
+      "targets": [
+        "1387e974f1f2d4f45fc2",
+        "26a8ce1a9dbb35df8c3c",
+        "64a689f61e8c839408a8",
+        "9829da728c64acb4132d",
+        "0459b1098ceb577b660d",
+        "d6ebf7228ec9e0ed965e",
+        "683911930431b45583f6"
+      ]
+    },
+    {
+      "seed_track_id": "b1a3179bf3800bce5129",
+      "name": "It's My Life",
+      "artist": "Talk Talk",
+      "targets": [
+        "07e303b65caa5ce9123f",
+        "923e85f553c3fdbe5ae6",
+        "e6ec8d2da318ae89246c",
+        "0f3dea69b1a0786e38be",
+        "3184e4deb5ca145059b7",
+        "a6f6288606708c75c9b9",
+        "8264b8647701ee62b79a"
+      ]
+    },
+    {
+      "seed_track_id": "c71d4d094c630e637ad3",
+      "name": "Enola Gay",
+      "artist": "Orchestral Manoeuvres in the Dark",
+      "targets": [
+        "0c0ee38a43d62adb751a",
+        "d78a87ed101024421658",
+        "cc1dbe270a3f231498ab",
+        "042fb66c40b6d60c921d",
+        "2e7f686cf032edab9f24",
+        "73392798190f729f4a8e",
+        "f11c610c11fd9c00c68e"
+      ]
+    },
+    {
+      "seed_track_id": "26071051d93cad13d9ac",
+      "name": "Our House",
+      "artist": "Madness",
+      "targets": [
+        "6d2fbd5b45632f4d14a4",
+        "73392798190f729f4a8e",
+        "042fb66c40b6d60c921d",
+        "673e0b4a99238dd4eff4",
+        "e236f4c35dfdf883cd90",
+        "683911930431b45583f6",
+        "d78a87ed101024421658"
+      ]
+    },
+    {
+      "seed_track_id": "e236f4c35dfdf883cd90",
+      "name": "Need You Tonight",
+      "artist": "INXS",
+      "targets": [
+        "673e0b4a99238dd4eff4",
+        "683911930431b45583f6",
+        "6d2fbd5b45632f4d14a4",
+        "26071051d93cad13d9ac",
+        "64a689f61e8c839408a8",
+        "26a8ce1a9dbb35df8c3c",
+        "73392798190f729f4a8e"
+      ]
+    },
+    {
+      "seed_track_id": "d78a87ed101024421658",
+      "name": "Don't You (Forget About Me)",
+      "artist": "Simple Minds",
+      "targets": [
+        "c71d4d094c630e637ad3",
+        "042fb66c40b6d60c921d",
+        "0c0ee38a43d62adb751a",
+        "cc1dbe270a3f231498ab",
+        "73392798190f729f4a8e",
+        "26071051d93cad13d9ac",
+        "2e7f686cf032edab9f24"
+      ]
+    },
+    {
+      "seed_track_id": "73392798190f729f4a8e",
+      "name": "Don't You Want Me",
+      "artist": "The Human League",
+      "targets": [
+        "26071051d93cad13d9ac",
+        "042fb66c40b6d60c921d",
+        "6d2fbd5b45632f4d14a4",
+        "673e0b4a99238dd4eff4",
+        "d78a87ed101024421658",
+        "c71d4d094c630e637ad3",
+        "e236f4c35dfdf883cd90"
+      ]
+    },
+    {
+      "seed_track_id": "07e303b65caa5ce9123f",
+      "name": "Love Shack",
+      "artist": "The B-52's",
+      "targets": [
+        "b1a3179bf3800bce5129",
+        "923e85f553c3fdbe5ae6",
+        "3184e4deb5ca145059b7",
+        "e6ec8d2da318ae89246c",
+        "0f3dea69b1a0786e38be",
+        "123d121a325ad360abe2",
+        "a6f6288606708c75c9b9"
+      ]
+    },
+    {
+      "seed_track_id": "683911930431b45583f6",
+      "name": "Walk Like an Egyptian",
+      "artist": "The Bangles",
+      "targets": [
+        "e236f4c35dfdf883cd90",
+        "673e0b4a99238dd4eff4",
+        "64a689f61e8c839408a8",
+        "26a8ce1a9dbb35df8c3c",
+        "6d2fbd5b45632f4d14a4",
+        "26071051d93cad13d9ac",
+        "d72b710416a5cd7e356b"
+      ]
+    },
+    {
+      "seed_track_id": "042fb66c40b6d60c921d",
+      "name": "Fade to Grey",
+      "artist": "Visage",
+      "targets": [
+        "73392798190f729f4a8e",
+        "d78a87ed101024421658",
+        "26071051d93cad13d9ac",
+        "c71d4d094c630e637ad3",
+        "0c0ee38a43d62adb751a",
+        "6d2fbd5b45632f4d14a4",
+        "cc1dbe270a3f231498ab"
+      ]
+    },
+    {
+      "seed_track_id": "473f9d211ff8ea801f82",
+      "name": "i miss your warm hands",
+      "artist": "i don't like mirrors",
+      "targets": [
+        "3a1fb77bba4538302b2a",
+        "c6748e9e6dff9b3c11d1",
+        "f51ae45a99e40f92959b",
+        "daec764c7725487410ef",
+        "125c36ed899e2389c0f7",
+        "99253febad99117197ae"
+      ]
+    },
+    {
+      "seed_track_id": "0c0ee38a43d62adb751a",
+      "name": "Tainted Love",
+      "artist": "Soft Cell",
+      "targets": [
+        "c71d4d094c630e637ad3",
+        "cc1dbe270a3f231498ab",
+        "d78a87ed101024421658",
+        "2e7f686cf032edab9f24",
+        "042fb66c40b6d60c921d",
+        "f11c610c11fd9c00c68e"
+      ]
+    },
+    {
+      "seed_track_id": "316d98647bf2d97d5a66",
+      "name": "Balada Do Louco",
+      "artist": "Os Mutantes",
+      "targets": [
+        "5bfaa69c3ad603cc42f0",
+        "aad655882659f7590c68",
+        "f77c60da34e87f4f4ef5",
+        "e4a190669773be50490e",
+        "616a6d5a9e42c5b1ec42",
+        "b758fb7da55c12784b11"
+      ]
+    },
+    {
+      "seed_track_id": "826eb582ebe44b873303",
+      "name": "Teenage Dirtbag",
+      "artist": "Wheatus",
+      "targets": [
+        "8b814a986c88a5805c4c",
+        "b85ee907667dbd02549f",
+        "3e1243cfbbb873979c36",
+        "9ff416fc12723d947278",
+        "6043d5a6862af8d4ab4f",
+        "a22ff421f44ad2ecacaf"
+      ]
+    },
+    {
+      "seed_track_id": "cc1dbe270a3f231498ab",
+      "name": "Blue Monday '88",
+      "artist": "New Order",
+      "targets": [
+        "0c0ee38a43d62adb751a",
+        "2e7f686cf032edab9f24",
+        "c71d4d094c630e637ad3",
+        "d78a87ed101024421658",
+        "f11c610c11fd9c00c68e",
+        "042fb66c40b6d60c921d"
+      ]
+    },
+    {
+      "seed_track_id": "6d2fbd5b45632f4d14a4",
+      "name": "Close to Me",
+      "artist": "The Cure",
+      "targets": [
+        "26071051d93cad13d9ac",
+        "673e0b4a99238dd4eff4",
+        "73392798190f729f4a8e",
+        "e236f4c35dfdf883cd90",
+        "042fb66c40b6d60c921d",
+        "683911930431b45583f6"
+      ]
+    },
+    {
+      "seed_track_id": "14461e9335e19ddce63d",
+      "name": "Sugar, We're Goin Down",
+      "artist": "Fall Out Boy",
+      "targets": [
+        "0d9b891074ddf19b87cc",
+        "4f89710bd3c1d416d9be",
+        "97598a58874835d382b0",
+        "0f99cde3b818931bf65a",
+        "a7d266f8a0af8f565f58",
+        "d2ff7cb41e7d029bcb96"
+      ]
+    },
+    {
+      "seed_track_id": "673e0b4a99238dd4eff4",
+      "name": "Shout",
+      "artist": "Tears for Fears",
+      "targets": [
+        "e236f4c35dfdf883cd90",
+        "683911930431b45583f6",
+        "6d2fbd5b45632f4d14a4",
+        "26071051d93cad13d9ac",
+        "73392798190f729f4a8e",
+        "64a689f61e8c839408a8"
+      ]
+    },
+    {
+      "seed_track_id": "97598a58874835d382b0",
+      "name": "My Own Worst Enemy",
+      "artist": "Lit",
+      "targets": [
+        "0d9b891074ddf19b87cc",
+        "14461e9335e19ddce63d",
+        "a7d266f8a0af8f565f58",
+        "d2ff7cb41e7d029bcb96",
+        "4f89710bd3c1d416d9be",
+        "0f99cde3b818931bf65a"
+      ]
+    },
+    {
+      "seed_track_id": "9ff416fc12723d947278",
+      "name": "The Middle",
+      "artist": "Jimmy Eat World",
+      "targets": [
+        "3e1243cfbbb873979c36",
+        "6043d5a6862af8d4ab4f",
+        "b85ee907667dbd02549f",
+        "826eb582ebe44b873303",
+        "8b814a986c88a5805c4c",
+        "d2ff7cb41e7d029bcb96"
+      ]
+    },
+    {
+      "seed_track_id": "5bfaa69c3ad603cc42f0",
+      "name": "As Rosas N\u00e3o Falam",
+      "artist": "Cartola",
+      "targets": [
+        "316d98647bf2d97d5a66",
+        "aad655882659f7590c68",
+        "616a6d5a9e42c5b1ec42",
+        "f77c60da34e87f4f4ef5",
+        "b758fb7da55c12784b11",
+        "e4a190669773be50490e"
+      ]
+    },
+    {
+      "seed_track_id": "e4a190669773be50490e",
+      "name": "Sangue Latino",
+      "artist": "Secos & Molhados",
+      "targets": [
+        "f77c60da34e87f4f4ef5",
+        "aad655882659f7590c68",
+        "316d98647bf2d97d5a66",
+        "360a1b13217d813a2c2f",
+        "5bfaa69c3ad603cc42f0",
+        "55319155acf2c42db67b"
+      ]
+    },
+    {
+      "seed_track_id": "d2ff7cb41e7d029bcb96",
+      "name": "The Anthem",
+      "artist": "Good Charlotte",
+      "targets": [
+        "a7d266f8a0af8f565f58",
+        "6043d5a6862af8d4ab4f",
+        "97598a58874835d382b0",
+        "0d9b891074ddf19b87cc",
+        "14461e9335e19ddce63d",
+        "9ff416fc12723d947278"
+      ]
+    },
+    {
+      "seed_track_id": "6043d5a6862af8d4ab4f",
+      "name": "Dear Maria, Count Me In",
+      "artist": "All Time Low",
+      "targets": [
+        "9ff416fc12723d947278",
+        "3e1243cfbbb873979c36",
+        "d2ff7cb41e7d029bcb96",
+        "a7d266f8a0af8f565f58",
+        "b85ee907667dbd02549f",
+        "826eb582ebe44b873303"
+      ]
+    },
+    {
+      "seed_track_id": "b85ee907667dbd02549f",
+      "name": "Face Down",
+      "artist": "The Red Jumpsuit Apparatus",
+      "targets": [
+        "3e1243cfbbb873979c36",
+        "826eb582ebe44b873303",
+        "8b814a986c88a5805c4c",
+        "9ff416fc12723d947278",
+        "6043d5a6862af8d4ab4f"
+      ]
+    },
+    {
+      "seed_track_id": "aad655882659f7590c68",
+      "name": "Como Nossos Pais",
+      "artist": "Belchior",
+      "targets": [
+        "316d98647bf2d97d5a66",
+        "f77c60da34e87f4f4ef5",
+        "5bfaa69c3ad603cc42f0",
+        "e4a190669773be50490e",
+        "616a6d5a9e42c5b1ec42"
+      ]
+    },
+    {
+      "seed_track_id": "3e1243cfbbb873979c36",
+      "name": "What's My Age Again?",
+      "artist": "blink-182",
+      "targets": [
+        "9ff416fc12723d947278",
+        "b85ee907667dbd02549f",
+        "826eb582ebe44b873303",
+        "6043d5a6862af8d4ab4f",
+        "8b814a986c88a5805c4c"
+      ]
+    },
+    {
+      "seed_track_id": "f77c60da34e87f4f4ef5",
+      "name": "Ideologia",
+      "artist": "Cazuza",
+      "targets": [
+        "aad655882659f7590c68",
+        "e4a190669773be50490e",
+        "316d98647bf2d97d5a66",
+        "5bfaa69c3ad603cc42f0",
+        "360a1b13217d813a2c2f"
+      ]
+    },
+    {
+      "seed_track_id": "0d9b891074ddf19b87cc",
+      "name": "In Too Deep",
+      "artist": "Sum 41",
+      "targets": [
+        "14461e9335e19ddce63d",
+        "97598a58874835d382b0",
+        "4f89710bd3c1d416d9be",
+        "a7d266f8a0af8f565f58",
+        "d2ff7cb41e7d029bcb96"
+      ]
+    },
+    {
+      "seed_track_id": "8b814a986c88a5805c4c",
+      "name": "Dirty Little Secret",
+      "artist": "The All-American Rejects",
+      "targets": [
+        "826eb582ebe44b873303",
+        "b85ee907667dbd02549f",
+        "3e1243cfbbb873979c36",
+        "9ff416fc12723d947278",
+        "a22ff421f44ad2ecacaf"
+      ]
+    },
+    {
+      "seed_track_id": "a7d266f8a0af8f565f58",
+      "name": "Basket Case",
+      "artist": "Green Day",
+      "targets": [
+        "d2ff7cb41e7d029bcb96",
+        "97598a58874835d382b0",
+        "0d9b891074ddf19b87cc",
+        "14461e9335e19ddce63d",
+        "6043d5a6862af8d4ab4f"
+      ]
+    },
+    {
+      "seed_track_id": "2e7f686cf032edab9f24",
+      "name": "Take on Me",
+      "artist": "a-ha",
+      "targets": [
+        "f11c610c11fd9c00c68e",
+        "cc1dbe270a3f231498ab",
+        "0c0ee38a43d62adb751a",
+        "c71d4d094c630e637ad3",
+        "d78a87ed101024421658"
+      ]
+    },
+    {
+      "seed_track_id": "9f4efef584593a8bb730",
+      "name": "Chamber of Reflection",
+      "artist": "Mac DeMarco",
+      "targets": [
+        "807aa63e1966548240de",
+        "dc745da729724451ea38",
+        "ce0efe9e9f7a3faf672c",
+        "cecdf41730a4907166c8",
+        "3018235c39dc7c96fef1"
+      ]
+    },
+    {
+      "seed_track_id": "b4b2d09fd10954b29bd8",
+      "name": "Yam Yam",
+      "artist": "No Vacation",
+      "targets": [
+        "290f41782ef9c4db3aab",
+        "4682370a864e4f0129f0",
+        "f66a9b4f6186dace703e",
+        "a5e05b9d054fdf7c11cc",
+        "941a412442497ae7745a"
+      ]
+    },
+    {
+      "seed_track_id": "f52e17cd7801c009745f",
+      "name": "The Passenger",
+      "artist": "Iggy Pop",
+      "targets": [
+        "12d93eaacd82684320dc",
+        "71b8cfae67ad08fb258f",
+        "f65e3d15dc3cc02c24ef",
+        "37d557728dea450fc995",
+        "f63d13a7ab2d8eaf4e1f"
+      ]
+    },
+    {
+      "seed_track_id": "3184e4deb5ca145059b7",
+      "name": "Whip It",
+      "artist": "Devo",
+      "targets": [
+        "07e303b65caa5ce9123f",
+        "135953a23dff6596860f",
+        "b1a3179bf3800bce5129",
+        "923e85f553c3fdbe5ae6",
+        "fa869baa8204426ffa4a"
+      ]
+    },
+    {
+      "seed_track_id": "fe4512a93c4169ae5e52",
+      "name": "Call Me",
+      "artist": "Blondie",
+      "targets": [
+        "5dc274e3c60b934efe46",
+        "8d2f2ee2be0bf32309ad",
+        "d18d91f7959e8e04543a",
+        "135953a23dff6596860f"
+      ]
+    },
+    {
+      "seed_track_id": "5dc274e3c60b934efe46",
+      "name": "Cities in Dust",
+      "artist": "Siouxsie and the Banshees",
+      "targets": [
+        "d18d91f7959e8e04543a",
+        "fe4512a93c4169ae5e52",
+        "8d2f2ee2be0bf32309ad",
+        "135953a23dff6596860f"
+      ]
+    },
+    {
+      "seed_track_id": "54f247c7dbe2bbad2eae",
+      "name": "I Was All Over Her",
+      "artist": "Salvia Palth",
+      "targets": [
+        "093272adababf577da18",
+        "876598df8e4e3a4a47d5",
+        "cee96aadc61352d831ae",
+        "0aa4681a1a450aabde59"
+      ]
+    },
+    {
+      "seed_track_id": "cda0d2891c198256574f",
+      "name": "Palco",
+      "artist": "Gilberto Gil",
+      "targets": [
+        "1cc3ef80adcfdc43a115",
+        "ae593eb026f6e01a8efe",
+        "4e96be8804cc296a7ac2",
+        "25c9826974f08b7593c8"
+      ]
+    },
+    {
+      "seed_track_id": "1cf5e208b91e9ebaf746",
+      "name": "window",
+      "artist": "sundots",
+      "targets": [
+        "01c7e540b99a13d34a1c",
+        "b94cec24c542346a20e7",
+        "a153620e1447a2ac893c",
+        "961d89661e9e8d882291"
+      ]
+    },
+    {
+      "seed_track_id": "01c7e540b99a13d34a1c",
+      "name": "half return",
+      "artist": "Adrianne Lenker",
+      "targets": [
+        "1cf5e208b91e9ebaf746",
+        "a153620e1447a2ac893c",
+        "b94cec24c542346a20e7",
+        "961d89661e9e8d882291"
+      ]
+    },
+    {
+      "seed_track_id": "8d2f2ee2be0bf32309ad",
+      "name": "Video Killed the Radio Star",
+      "artist": "The Buggles",
+      "targets": [
+        "fe4512a93c4169ae5e52",
+        "5dc274e3c60b934efe46",
+        "135953a23dff6596860f",
+        "d18d91f7959e8e04543a"
+      ]
+    },
+    {
+      "seed_track_id": "4f89710bd3c1d416d9be",
+      "name": "Lifestyles of the Rich & Famous",
+      "artist": "Good Charlotte",
+      "targets": [
+        "0f99cde3b818931bf65a",
+        "14461e9335e19ddce63d",
+        "0d9b891074ddf19b87cc",
+        "97598a58874835d382b0"
+      ]
+    },
+    {
+      "seed_track_id": "1cc3ef80adcfdc43a115",
+      "name": "O b\u00eabado e a equilibrista",
+      "artist": "Elis Regina",
+      "targets": [
+        "cda0d2891c198256574f",
+        "4e96be8804cc296a7ac2",
+        "08cc0c6ce343a4f0c8dd",
+        "25c9826974f08b7593c8"
+      ]
+    },
+    {
+      "seed_track_id": "8c9cc70207b1fd55e862",
+      "name": "Exagerado",
+      "artist": "Cazuza",
+      "targets": [
+        "2b0aa9e882050bd81d6a",
+        "8dc6fe416fb2300614e5",
+        "7ada5d55e6198e004717",
+        "f98f99ae949caa3f3815"
+      ]
+    },
+    {
+      "seed_track_id": "b94cec24c542346a20e7",
+      "name": "9",
+      "artist": "Dean Blunt",
+      "targets": [
+        "1cf5e208b91e9ebaf746",
+        "01c7e540b99a13d34a1c",
+        "a153620e1447a2ac893c",
+        "5693175e8972e7bb3eca"
+      ]
+    },
+    {
+      "seed_track_id": "616a6d5a9e42c5b1ec42",
+      "name": "Mania de voc\u00ea",
+      "artist": "Rita Lee",
+      "targets": [
+        "b758fb7da55c12784b11",
+        "5bfaa69c3ad603cc42f0",
+        "316d98647bf2d97d5a66",
+        "aad655882659f7590c68"
+      ]
+    },
+    {
+      "seed_track_id": "f11c610c11fd9c00c68e",
+      "name": "Enjoy the Silence",
+      "artist": "Depeche Mode",
+      "targets": [
+        "2e7f686cf032edab9f24",
+        "cc1dbe270a3f231498ab",
+        "0c0ee38a43d62adb751a",
+        "c71d4d094c630e637ad3"
+      ]
+    },
+    {
+      "seed_track_id": "f51ae45a99e40f92959b",
+      "name": "another life",
+      "artist": "Orchid Mantis",
+      "targets": [
+        "473f9d211ff8ea801f82",
+        "daec764c7725487410ef",
+        "125c36ed899e2389c0f7",
+        "6eca9d72d93d329094d6"
+      ]
+    },
+    {
+      "seed_track_id": "360a1b13217d813a2c2f",
+      "name": "Trem das Onze",
+      "artist": "Adoniran Barbosa",
+      "targets": [
+        "55319155acf2c42db67b",
+        "6e54980d3fd367f15a92",
+        "e4a190669773be50490e",
+        "f77c60da34e87f4f4ef5"
+      ]
+    },
+    {
+      "seed_track_id": "b758fb7da55c12784b11",
+      "name": "Travessia",
+      "artist": "Milton Nascimento",
+      "targets": [
+        "616a6d5a9e42c5b1ec42",
+        "5bfaa69c3ad603cc42f0",
+        "316d98647bf2d97d5a66",
+        "4e96be8804cc296a7ac2"
+      ]
+    },
+    {
+      "seed_track_id": "a153620e1447a2ac893c",
+      "name": "i just want to hold her",
+      "artist": "sign crushes motorist",
+      "targets": [
+        "01c7e540b99a13d34a1c",
+        "961d89661e9e8d882291",
+        "1cf5e208b91e9ebaf746",
+        "b94cec24c542346a20e7"
+      ]
+    },
+    {
+      "seed_track_id": "63c66ee72f190958ee0e",
+      "name": "Lifeguard of a Helpless Body",
+      "artist": "Monobody",
+      "targets": [
+        "ed2c4f8dbe4dcc1eaaf8",
+        "18a81dd10623d589a87f",
+        "606f97cc4440f3210803",
+        "ddf60d34891568d9fdb2"
+      ]
+    },
+    {
+      "seed_track_id": "25c9826974f08b7593c8",
+      "name": "Constru\u00e7\u00e3o",
+      "artist": "Chico Buarque",
+      "targets": [
+        "08cc0c6ce343a4f0c8dd",
+        "ac8b53b920daa5df9bb4",
+        "cda0d2891c198256574f",
+        "1cc3ef80adcfdc43a115"
+      ]
+    },
+    {
+      "seed_track_id": "420756d086fb13baf44f",
+      "name": "we fell in love in october",
+      "artist": "girl in red",
+      "targets": [
+        "c9a11b72dad5b377bf30",
+        "2e53ca1eaf7a08c93d74",
+        "c6ad0f382391deaaf405",
+        "3018235c39dc7c96fef1"
+      ]
+    },
+    {
+      "seed_track_id": "7ada5d55e6198e004717",
+      "name": "Sina",
+      "artist": "Djavan",
+      "targets": [
+        "8dc6fe416fb2300614e5",
+        "2b0aa9e882050bd81d6a",
+        "8c9cc70207b1fd55e862",
+        "94c4e5c079734b1503e6"
+      ]
+    },
+    {
+      "seed_track_id": "08cc0c6ce343a4f0c8dd",
+      "name": "Aquele Abra\u00e7o",
+      "artist": "Gilberto Gil",
+      "targets": [
+        "25c9826974f08b7593c8",
+        "1cc3ef80adcfdc43a115",
+        "4e96be8804cc296a7ac2",
+        "ac8b53b920daa5df9bb4"
+      ]
+    },
+    {
+      "seed_track_id": "4e96be8804cc296a7ac2",
+      "name": "Cheiro De Amor",
+      "artist": "Maria Beth\u00e2nia",
+      "targets": [
+        "1cc3ef80adcfdc43a115",
+        "cda0d2891c198256574f",
+        "08cc0c6ce343a4f0c8dd",
+        "b758fb7da55c12784b11"
+      ]
+    },
+    {
+      "seed_track_id": "f98f99ae949caa3f3815",
+      "name": "Eu Tamb\u00e9m Quero Beijar",
+      "artist": "Pepeu Gomes",
+      "targets": [
+        "c0b7dfb5cb61312b7403",
+        "b8311af48c6cb505e539",
+        "66aaca9fe3aed1f09756",
+        "8c9cc70207b1fd55e862"
+      ]
+    },
+    {
+      "seed_track_id": "2b0aa9e882050bd81d6a",
+      "name": "Linda Juventude",
+      "artist": "14 Bis",
+      "targets": [
+        "8c9cc70207b1fd55e862",
+        "8dc6fe416fb2300614e5",
+        "7ada5d55e6198e004717"
+      ]
+    },
+    {
+      "seed_track_id": "a5e05b9d054fdf7c11cc",
+      "name": "Robbers",
+      "artist": "The 1975",
+      "targets": [
+        "4682370a864e4f0129f0",
+        "941a412442497ae7745a",
+        "b4b2d09fd10954b29bd8"
+      ]
+    },
+    {
+      "seed_track_id": "b8311af48c6cb505e539",
+      "name": "Aquarela",
+      "artist": "Toquinho",
+      "targets": [
+        "66aaca9fe3aed1f09756",
+        "c0b7dfb5cb61312b7403",
+        "f98f99ae949caa3f3815"
+      ]
+    },
+    {
+      "seed_track_id": "f65e3d15dc3cc02c24ef",
+      "name": "Sympathy for the Devil",
+      "artist": "The Rolling Stones",
+      "targets": [
+        "12d93eaacd82684320dc",
+        "37d557728dea450fc995",
+        "f52e17cd7801c009745f"
+      ]
+    },
+    {
+      "seed_track_id": "8dc6fe416fb2300614e5",
+      "name": "Lan\u00e7a Perfume",
+      "artist": "Rita Lee",
+      "targets": [
+        "2b0aa9e882050bd81d6a",
+        "7ada5d55e6198e004717",
+        "8c9cc70207b1fd55e862"
+      ]
+    },
+    {
+      "seed_track_id": "12d93eaacd82684320dc",
+      "name": "Sweet Home Alabama",
+      "artist": "Lynyrd Skynyrd",
+      "targets": [
+        "f65e3d15dc3cc02c24ef",
+        "37d557728dea450fc995",
+        "f52e17cd7801c009745f"
+      ]
+    },
+    {
+      "seed_track_id": "4682370a864e4f0129f0",
+      "name": "The Night We Met",
+      "artist": "Lord Huron",
+      "targets": [
+        "a5e05b9d054fdf7c11cc",
+        "941a412442497ae7745a",
+        "b4b2d09fd10954b29bd8"
+      ]
+    },
+    {
+      "seed_track_id": "c0b7dfb5cb61312b7403",
+      "name": "O que \u00e9 o que \u00e9?",
+      "artist": "Gonzaguinha",
+      "targets": [
+        "b8311af48c6cb505e539",
+        "66aaca9fe3aed1f09756",
+        "f98f99ae949caa3f3815"
+      ]
+    },
+    {
+      "seed_track_id": "c6748e9e6dff9b3c11d1",
+      "name": "Constellations",
+      "artist": "Duster",
+      "targets": [
+        "473f9d211ff8ea801f82",
+        "3a1fb77bba4538302b2a",
+        "99253febad99117197ae"
+      ]
+    },
+    {
+      "seed_track_id": "d18d91f7959e8e04543a",
+      "name": "Making Plans for Nigel",
+      "artist": "XTC",
+      "targets": [
+        "5dc274e3c60b934efe46",
+        "fe4512a93c4169ae5e52",
+        "8d2f2ee2be0bf32309ad"
+      ]
+    },
+    {
+      "seed_track_id": "daec764c7725487410ef",
+      "name": "Limerence",
+      "artist": "Yves Tumor",
+      "targets": [
+        "125c36ed899e2389c0f7",
+        "473f9d211ff8ea801f82",
+        "f51ae45a99e40f92959b"
+      ]
+    },
+    {
+      "seed_track_id": "290f41782ef9c4db3aab",
+      "name": "Love",
+      "artist": "Lana Del Rey",
+      "targets": [
+        "d925253e889cc534c8d2",
+        "b4b2d09fd10954b29bd8",
+        "f66a9b4f6186dace703e"
+      ]
+    },
+    {
+      "seed_track_id": "37d557728dea450fc995",
+      "name": "Bad Moon Rising",
+      "artist": "Creedence Clearwater Revival",
+      "targets": [
+        "f65e3d15dc3cc02c24ef",
+        "12d93eaacd82684320dc",
+        "f52e17cd7801c009745f"
+      ]
+    },
+    {
+      "seed_track_id": "66aaca9fe3aed1f09756",
+      "name": "Frisson",
+      "artist": "Tunai",
+      "targets": [
+        "b8311af48c6cb505e539",
+        "c0b7dfb5cb61312b7403",
+        "f98f99ae949caa3f3815"
+      ]
+    },
+    {
+      "seed_track_id": "941a412442497ae7745a",
+      "name": "Sugar for the Pill",
+      "artist": "Slowdive",
+      "targets": [
+        "a5e05b9d054fdf7c11cc",
+        "4682370a864e4f0129f0",
+        "b4b2d09fd10954b29bd8"
+      ]
+    },
+    {
+      "seed_track_id": "125c36ed899e2389c0f7",
+      "name": "Stars Will Fall",
+      "artist": "Duster",
+      "targets": [
+        "daec764c7725487410ef",
+        "473f9d211ff8ea801f82",
+        "f51ae45a99e40f92959b"
+      ]
+    },
+    {
+      "seed_track_id": "4a5396f3a2c04254cb82",
+      "name": "Love Songs on the Radio",
+      "artist": "Mojave 3",
+      "targets": [
+        "06e8be4971ddd506dd67",
+        "bff0f3c3e835b15e6a61",
+        "a528be1427e20590b4dc"
+      ]
+    },
+    {
+      "seed_track_id": "066452dd244935bfe2f5",
+      "name": "La Belle De Jour",
+      "artist": "Alceu Valen\u00e7a",
+      "targets": [
+        "e3a2aebaf962bf8055c9",
+        "18fca088f91e9629eefa",
+        "66033a9b7b3ed4bfbde4"
+      ]
+    },
+    {
+      "seed_track_id": "0f99cde3b818931bf65a",
+      "name": "Fat Lip",
+      "artist": "Sum 41",
+      "targets": [
+        "4f89710bd3c1d416d9be",
+        "14461e9335e19ddce63d",
+        "97598a58874835d382b0"
+      ]
+    },
+    {
+      "seed_track_id": "18a81dd10623d589a87f",
+      "name": "Year as Lift",
+      "artist": "Rooftops",
+      "targets": [
+        "ddf60d34891568d9fdb2",
+        "63c66ee72f190958ee0e",
+        "ed2c4f8dbe4dcc1eaaf8"
+      ]
+    },
+    {
+      "seed_track_id": "55319155acf2c42db67b",
+      "name": "Chega de Saudade",
+      "artist": "Jo\u00e3o Gilberto",
+      "targets": [
+        "360a1b13217d813a2c2f",
+        "6e54980d3fd367f15a92",
+        "e4a190669773be50490e"
+      ]
+    },
+    {
+      "seed_track_id": "06e8be4971ddd506dd67",
+      "name": "Not My Baby",
+      "artist": "Alvvays",
+      "targets": [
+        "4a5396f3a2c04254cb82",
+        "bff0f3c3e835b15e6a61",
+        "7d297dd83a9c6e2eb873"
+      ]
+    },
+    {
+      "seed_track_id": "807aa63e1966548240de",
+      "name": "strangers",
+      "artist": "proderics",
+      "targets": [
+        "9f4efef584593a8bb730",
+        "cecdf41730a4907166c8",
+        "dc745da729724451ea38"
+      ]
+    },
+    {
+      "seed_track_id": "c9a11b72dad5b377bf30",
+      "name": "Mrs Magic",
+      "artist": "Strawberry Guy",
+      "targets": [
+        "420756d086fb13baf44f",
+        "c6ad0f382391deaaf405",
+        "2e53ca1eaf7a08c93d74"
+      ]
+    },
+    {
+      "seed_track_id": "ed2c4f8dbe4dcc1eaaf8",
+      "name": "No One Cares",
+      "artist": "Via Luna",
+      "targets": [
+        "606f97cc4440f3210803",
+        "63c66ee72f190958ee0e",
+        "18a81dd10623d589a87f"
+      ]
+    },
+    {
+      "seed_track_id": "2e53ca1eaf7a08c93d74",
+      "name": "If You Want To",
+      "artist": "beabadoobee",
+      "targets": [
+        "3018235c39dc7c96fef1",
+        "420756d086fb13baf44f",
+        "c9a11b72dad5b377bf30"
+      ]
+    },
+    {
+      "seed_track_id": "cecdf41730a4907166c8",
+      "name": "Space Girl",
+      "artist": "Frances Forever",
+      "targets": [
+        "807aa63e1966548240de",
+        "9f4efef584593a8bb730",
+        "fccb7b585e0afbb434a1"
+      ]
+    },
+    {
+      "seed_track_id": "961d89661e9e8d882291",
+      "name": "How to Disappear Completely",
+      "artist": "Radiohead",
+      "targets": [
+        "a153620e1447a2ac893c",
+        "01c7e540b99a13d34a1c",
+        "1cf5e208b91e9ebaf746"
+      ]
+    },
+    {
+      "seed_track_id": "b0e51aa77a2749152b59",
+      "name": "Diz Que Fui Por Ai",
+      "artist": "Nara Le\u00e3o",
+      "targets": [
+        "c0fcc8a31ee3f32fd513",
+        "d14aca653ff1183ad139",
+        "91d36cd0ed4755b8b28c"
+      ]
+    }
+  ]
+}

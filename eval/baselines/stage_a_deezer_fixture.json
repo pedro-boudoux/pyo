@@ -1,0 +1,12 @@
+{
+  "model": "stage_a_deezer_fixture",
+  "k": 10,
+  "read_only": true,
+  "seeds_scored": 100,
+  "seeds_total": 100,
+  "coverage": 1.0,
+  "recall_at_10": 0.0403,
+  "mrr": 0.0336,
+  "intra_list_distance": 0.0273,
+  "median_listeners": 374160.07
+}

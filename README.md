@@ -128,14 +128,14 @@ Offline Phase 2 training has a separate dependency so it does not inflate the AP
 deployment:
 
 ```bash
-pip install -r requirements-jobs.txt
-make train-colisten COLISTEN_ARGS="--env-file .env.prod --workers 8 --beta 0.5"
+make train-install
+make train-colisten COLISTEN_ARGS="--check-density --env-file path/to/runtime.env"
+make train-colisten COLISTEN_ARGS="--env-file path/to/runtime.env --workers 8 --beta 0.5"
 ```
 
 For production, run this from a separate Coolify scheduled job/worker built from
-the same repo with both `requirements.txt` and `requirements-jobs.txt` installed.
-Let the job inherit `DATABASE_URL` and `COLISTEN_BETA` from Coolify, verify the
-database target before enabling its schedule, and invoke:
+`Dockerfile.training`. Let the job inherit `DATABASE_URL` and `COLISTEN_BETA`
+from Coolify, verify the database target before enabling its schedule, and invoke:
 
 ```bash
 python -m jobs.train_colisten_embeddings --workers 4 --beta "$COLISTEN_BETA"
@@ -144,6 +144,20 @@ python -m jobs.train_colisten_embeddings --workers 4 --beta "$COLISTEN_BETA"
 The trainer remains density-gated and records every successful run in
 `model_runs`. It is not part of the lean API process and should not be scheduled
 until the first manual production training and independent beta evaluation pass.
+Do not use the MacBook's historical `.env.prod` for production training without
+rechecking it: the live API currently uses the private Coolify Postgres service,
+while that file can still point at the retired Neon target.
+
+The independent Stage B fixture is built from cross-artist adjacency in public
+Deezer playlists, never Last.fm `getSimilar`:
+
+```bash
+make build-colisten-ground-truth
+```
+
+The committed fixture is `eval/ground_truth_colisten.json`; its Stage A reference
+result is `eval/baselines/stage_a_deezer_fixture.json`. `eval/sweep_beta.py`
+validates the fixture provenance and rejects circular Last.fm-derived input.
 
 You'll need a free Last.fm API key from [last.fm/api](https://www.last.fm/api),
 dropped into a `.env`:

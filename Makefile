@@ -12,9 +12,11 @@
 #   make install   # install backend + frontend dependencies
 
 VENV ?= .venv
+TRAIN_VENV ?= .venv-train
+PYTHON_312 ?= python3.12
 STRESS_URL ?= http://localhost:8000
 
-.PHONY: db db-down db-reset api web test stress install crawl-colisten train-colisten rebuild-hybrid
+.PHONY: db db-down db-reset api web test stress install train-install crawl-colisten train-colisten rebuild-hybrid build-colisten-ground-truth
 
 db:
 	docker compose up -d
@@ -47,11 +49,18 @@ install:
 	$(VENV)/bin/pip install -r requirements.txt -r requirements-dev.txt
 	cd frontend && npm install
 
+train-install:
+	$(PYTHON_312) -m venv $(TRAIN_VENV)
+	$(TRAIN_VENV)/bin/pip install -r requirements.txt -r requirements-jobs.txt
+
 crawl-colisten:
 	$(VENV)/bin/python -m jobs.crawl_colisten $(COLISTEN_ARGS)
 
 train-colisten:
-	$(VENV)/bin/python -m jobs.train_colisten_embeddings $(COLISTEN_ARGS)
+	$(TRAIN_VENV)/bin/python -m jobs.train_colisten_embeddings $(COLISTEN_ARGS)
 
 rebuild-hybrid:
 	$(VENV)/bin/python -m jobs.rebuild_hybrid_embeddings $(COLISTEN_ARGS)
+
+build-colisten-ground-truth:
+	$(TRAIN_VENV)/bin/python -m eval.ground_truth_colisten $(COLISTEN_ARGS)

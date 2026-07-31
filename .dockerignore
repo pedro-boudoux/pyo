@@ -1,0 +1,8 @@
+.git
+.env
+.env.*
+.venv
+.venv-train
+__pycache__
+*.pyc
+frontend/node_modules

@@ -30,3 +30,17 @@ def test_density_gate_stops_before_loading_training_dependency(monkeypatch):
     )
     with pytest.raises(RuntimeError, match="density gate not met"):
         trainer.train()
+
+
+def test_density_gate_status_exposes_thresholds():
+    below = trainer.density_gate_status(
+        {"nodes": 30000, "edges": 110000, "avg_degree": 7.33}
+    )
+    ready = trainer.density_gate_status(
+        {"nodes": 30000, "edges": 120000, "avg_degree": 8.0}
+    )
+
+    assert below["ready"] is False
+    assert ready["ready"] is True
+    assert ready["required_nodes"] == trainer.COLISTEN_MIN_NODES
+    assert ready["required_avg_degree"] == trainer.COLISTEN_MIN_AVG_DEGREE

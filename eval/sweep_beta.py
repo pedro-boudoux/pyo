@@ -27,6 +27,7 @@ def _preload(argv: list[str]) -> None:
 _preload(sys.argv[1:])
 
 from eval.run_eval import evaluate, _print_table
+from eval.ground_truth_colisten import validate_fixture
 from jobs.rebuild_hybrid_embeddings import rebuild
 
 
@@ -53,6 +54,12 @@ def main() -> int:
         parser.error(
             "independent Stage B ground truth is missing; do not substitute Last.fm getSimilar"
         )
+    with open(args.ground_truth) as handle:
+        fixture = json.load(handle)
+    try:
+        validate_fixture(fixture)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     results = []
     for beta in args.betas:

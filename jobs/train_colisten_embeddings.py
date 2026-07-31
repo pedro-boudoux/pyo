@@ -41,6 +41,19 @@ from app.services import colisten
 from app.services.hybrid import compose
 
 
+def density_gate_status(stats: dict) -> dict:
+    ready = (
+        stats["nodes"] >= COLISTEN_MIN_NODES
+        and stats["avg_degree"] >= COLISTEN_MIN_AVG_DEGREE
+    )
+    return {
+        **stats,
+        "required_nodes": COLISTEN_MIN_NODES,
+        "required_avg_degree": COLISTEN_MIN_AVG_DEGREE,
+        "ready": ready,
+    }
+
+
 def collapse_undirected_edges(rows) -> dict[str, list[tuple[str, float]]]:
     """Collapse directed/provenance duplicates and return weighted adjacency."""
     pairs: dict[tuple[str, str], float] = {}
@@ -132,16 +145,14 @@ def train(
     dry_run: bool = False,
     model_out: str | None = None,
 ) -> dict:
-    stats = colisten.graph_stats()
-    if not allow_sparse and (
-        stats["nodes"] < COLISTEN_MIN_NODES
-        or stats["avg_degree"] < COLISTEN_MIN_AVG_DEGREE
-    ):
+    gate = density_gate_status(colisten.graph_stats())
+    if not allow_sparse and not gate["ready"]:
         raise RuntimeError(
             "co-listening density gate not met: "
-            f"nodes={stats['nodes']} (need {COLISTEN_MIN_NODES}), "
-            f"avg_degree={stats['avg_degree']} (need {COLISTEN_MIN_AVG_DEGREE})"
+            f"nodes={gate['nodes']} (need {COLISTEN_MIN_NODES}), "
+            f"avg_degree={gate['avg_degree']} (need {COLISTEN_MIN_AVG_DEGREE})"
         )
+    stats = {key: gate[key] for key in ("nodes", "edges", "avg_degree")}
 
     try:
         from gensim.models import Word2Vec
@@ -208,9 +219,18 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--beta", type=float, default=COLISTEN_BETA)
     parser.add_argument("--allow-sparse", action="store_true")
+    parser.add_argument(
+        "--check-density",
+        action="store_true",
+        help="print the current gate status and exit without loading edges or training",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--model-out", default=None)
     args = parser.parse_args()
+    if args.check_density:
+        gate = density_gate_status(colisten.graph_stats())
+        print(json.dumps(gate, indent=2))
+        return 0 if gate["ready"] else 2
     result = train(
         walk_length=args.walk_length,
         walks_per_node=args.walks_per_node,
