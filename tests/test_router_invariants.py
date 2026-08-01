@@ -167,13 +167,13 @@ class TestFeedbackRouter:
         assert response.status_code != 400
 
     def test_valid_action_reject_not_rejected_by_guard(self, monkeypatch, client):
-        """'reject' also passes the 400 guard."""
+        """A parent-scoped 'reject' passes the action guard."""
         from contextlib import contextmanager
 
         call_count = [0]
         rows_sequence = [
-            [{"id": 1}],  # songs SELECT
-            [],           # feedback INSERT
+            [{"id": 1}],  # rejected song SELECT
+            [{"id": 2}],  # source song SELECT
         ]
 
         @contextmanager
@@ -196,9 +196,21 @@ class TestFeedbackRouter:
 
         response = client.post(
             "/feedback",
-            json={"track_id": "sometrackid12345678", "action": "reject"},
+            json={
+                "track_id": "sometrackid12345678",
+                "source_track_id": "source-track-id",
+                "action": "reject",
+            },
         )
         assert response.status_code != 400
+
+    def test_reject_requires_source_track_id(self, client):
+        response = client.post(
+            "/feedback",
+            json={"track_id": "sometrackid12345678", "action": "reject"},
+        )
+        assert response.status_code == 400
+        assert "source_track_id" in response.json()["detail"]
 
     def test_missing_fields_returns_422(self, client):
         """Pydantic validation: empty body → 422."""

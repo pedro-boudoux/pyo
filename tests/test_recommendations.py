@@ -586,6 +586,7 @@ class TestBuildRecommendations:
 
         monkeypatch.setattr(recs, "get_cursor", fake_cursor)
         monkeypatch.setattr(recs.steering, "apply_steering", lambda embedding, _: embedding)
+        monkeypatch.setattr(recs.steering, "get_rejected_track_ids", lambda _: set())
         monkeypatch.setattr(recs.embeddings, "ann_search", ann_search)
         monkeypatch.setattr(recs, "mmr_rerank", lambda _query, pool, _k, _lambda: pool)
 

@@ -51,11 +51,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_graph_edges_source_target
     ON graph_edges(source_id, target_id);
 
 CREATE TABLE IF NOT EXISTS feedback (
-    id         SERIAL PRIMARY KEY,
-    track_id   TEXT REFERENCES songs(track_id),
-    action     TEXT CHECK (action IN ('accept', 'reject')),
-    created_at TIMESTAMPTZ DEFAULT now()
+    id              SERIAL PRIMARY KEY,
+    track_id        TEXT REFERENCES songs(track_id),
+    source_track_id TEXT REFERENCES songs(track_id),
+    action          TEXT CHECK (action IN ('accept', 'reject')),
+    created_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_parent_reject_unique
+    ON feedback(source_track_id, track_id)
+    WHERE action = 'reject' AND source_track_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS colisten_edges (
     id              SERIAL PRIMARY KEY,

@@ -148,6 +148,7 @@ erDiagram
     feedback {
         serial id PK
         text track_id FK
+        text source_track_id FK "nullable only for historical rows"
         text action "accept | reject"
     }
     colisten_edges {
@@ -340,7 +341,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     seed(["seed embedding"]) --> calc
-    rej["rejected neighbors of this seed<br/>(feedback JOIN graph_edges)"] --> calc["query = seed − α·Σ rejected<br/>α = STEERING_ALPHA = 0.3"]
+    rej["parent-scoped rejected tracks<br/>(legacy NULL rows infer graph edge)"] --> calc["query = seed − α·Σ rejected<br/>α = STEERING_ALPHA = 0.3"]
     calc --> nrm["normalize"] --> q(["steered query vector"])
 ```
 
@@ -350,13 +351,13 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    req(["POST /feedback {track_id, action}"]) --> valid{"action valid?<br/>exists in songs?"}
+    req(["POST /feedback {source_track_id, track_id, action}"]) --> valid{"action valid?<br/>tracks exist?<br/>reject has source?"}
     valid -->|no| err["400 / 404"]
-    valid -->|yes| log[("INSERT feedback")]
+    valid -->|yes| log[("INSERT feedback<br/>reject ON CONFLICT DO NOTHING")]
 
     log --> branch{"action?"}
 
-    branch -->|reject| rdone["done — stored as negative.<br/>Future recs from the parent seed<br/>steer away (diagram 6)"]
+    branch -->|reject| rdone["delete that parent edge.<br/>Future recs/playlists/re-seeds<br/>steer + hard-exclude exact track"]
 
     branch -->|accept| promote["UPSERT graph_nodes<br/>is_seed = true"]
     promote --> reparent["copy parent edge → accepted node<br/>(keeps it linked in graph)"]
@@ -418,12 +419,12 @@ sequenceDiagram
     API->>DB: ANN (steered) + MMR
     API-->>FE: k neighbors
 
-    U->>FE: accept / reject node
-    FE->>API: POST /feedback
+    U->>FE: deliberately remove non-seed node
+    FE->>API: POST /feedback once per visible incoming parent
     alt accept
         API->>DB: promote to seed + new edges
     else reject
-        API->>DB: store negative (steers future recs)
+        API->>DB: store parent-scoped negative + remove edge
     end
 
     Note over FE,API: as nodes appear, FE prefetches<br/>GET /songs/{id}/spotify (link)<br/>and may poll GET /songs/{id}/status

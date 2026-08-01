@@ -49,7 +49,7 @@ type Props = {
   tags?: string[];
   loading: boolean;
   onExpand: (params: ExpansionParams) => void;
-  onDelete: () => void;
+  onDelete: () => void | Promise<void>;
   /** Block this artist from future recommendations (session-only). */
   onBlockArtist?: () => void;
   onClose: () => void;
@@ -488,8 +488,7 @@ export function NodePopover({
                 // (rendered below) instead of the inline two-click pattern.
                 setConfirmingDelete(true);
               } else if (confirmingDelete) {
-                setLeaving(true);
-                setTimeout(onDelete, EXIT_MS);
+                void onDelete();
               } else {
                 setConfirmingDelete(true);
               }
@@ -563,11 +562,11 @@ export function NodePopover({
               Cancel
             </button>
             <button
+              disabled={loading}
               onClick={() => {
-                setLeaving(true);
-                setTimeout(onDelete, EXIT_MS);
+                void onDelete();
               }}
-              className="flex-1 rounded-xl bg-red-500 py-2 text-xs font-medium text-white hover:bg-red-600 transition"
+              className="flex-1 rounded-xl bg-red-500 py-2 text-xs font-medium text-white hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Back to home
             </button>

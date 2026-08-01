@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from app.models import LinearPlaylistRequest, TreePlaylistRequest, PlaylistResponse, PlaylistTrack
 from app.db import get_cursor
 from app.ratelimit import limiter
-from app.services import ingest, embeddings as emb_service, blacklist, hybrid
+from app.services import ingest, embeddings as emb_service, blacklist, hybrid, steering
 from app.services.vector_utils import to_float_list
 from app.config import RATE_LIMIT_HEAVY
 
@@ -143,11 +143,13 @@ def linear_playlist(request: Request, response: Response, body: LinearPlaylistRe
 
     embed_missing(neighborhood)
     blocked_artists = blacklist.normalize(body.exclude_artists)
+    rejected_ids = steering.get_rejected_track_ids(body.track_id)
+    query_embedding = steering.apply_steering(seed_embedding, body.track_id)
 
     with get_cursor() as cursor:
         tracks = find_neighbors(
-            cursor, seed_embedding,
-            {body.track_id, *body.exclude_ids},
+            cursor, query_embedding,
+            {body.track_id, *body.exclude_ids, *rejected_ids},
             body.n, body.niche,
             neighborhood if neighborhood else None,
             blocked_artists,
@@ -193,9 +195,15 @@ def tree_playlist(request: Request, response: Response, body: TreePlaylistReques
             # expand allowed set with this node's own edges if it has any
             allowed.update(get_neighborhood(cursor, track_id))
             current_allowed = allowed - seen
+            # Tree traversal has a different parent at every queue entry. Apply
+            # that parent's own steering and exact exclusions without adding its
+            # rejects to global `seen` (the same track may still be valid for an
+            # unrelated parent later in the traversal).
+            rejected_ids = steering.get_rejected_track_ids(track_id)
+            query_embedding = steering.apply_steering(embedding, track_id)
 
             neighbors = find_neighbors(
-                cursor, embedding, seen, 2, body.niche,
+                cursor, query_embedding, seen | rejected_ids, 2, body.niche,
                 current_allowed if current_allowed else None,
                 blocked_artists,
             )

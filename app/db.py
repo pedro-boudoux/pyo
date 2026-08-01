@@ -146,10 +146,11 @@ def init_db():
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS feedback (
-                id         SERIAL PRIMARY KEY,
-                track_id   TEXT REFERENCES songs(track_id),
-                action     TEXT CHECK (action IN ('accept', 'reject')),
-                created_at TIMESTAMPTZ DEFAULT now()
+                id              SERIAL PRIMARY KEY,
+                track_id        TEXT REFERENCES songs(track_id),
+                source_track_id TEXT REFERENCES songs(track_id),
+                action          TEXT CHECK (action IN ('accept', 'reject')),
+                created_at      TIMESTAMPTZ DEFAULT now()
             )
         """)
 
@@ -223,6 +224,9 @@ def init_db():
     _try("ALTER TABLE songs RENAME COLUMN spotify_id TO track_id")
     _try("ALTER TABLE graph_nodes RENAME COLUMN spotify_id TO track_id")
     _try("ALTER TABLE feedback RENAME COLUMN spotify_id TO track_id")
+    # Parent-scoped rejection (issue #36). Existing rows deliberately remain
+    # NULL and retain their legacy graph-edge inferred behavior in steering.
+    _try("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS source_track_id TEXT REFERENCES songs(track_id)")
     _try("ALTER TABLE songs ADD COLUMN IF NOT EXISTS image TEXT")
     # Cached Spotify "listen" link. spotify_checked_at distinguishes "never looked
     # up" (NULL) from "looked up, not on Spotify" (set, with spotify_url NULL).
@@ -289,6 +293,11 @@ def init_db():
 
     # Ensure unique constraints and indexes exist regardless of how the table was created
     _try("CREATE UNIQUE INDEX IF NOT EXISTS songs_track_id_unique ON songs(track_id)")
+    _try("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_feedback_parent_reject_unique
+        ON feedback(source_track_id, track_id)
+        WHERE action = 'reject' AND source_track_id IS NOT NULL
+    """)
     _try("CREATE UNIQUE INDEX IF NOT EXISTS graph_nodes_track_id_unique ON graph_nodes(track_id)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_embedding ON songs USING hnsw (embedding vector_cosine_ops)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_hybrid_embedding ON songs USING hnsw (hybrid_embedding vector_cosine_ops)")

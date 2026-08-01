@@ -65,6 +65,13 @@ export function seedSong(track_id: string) {
   );
 }
 
+export function rejectTrack(source_track_id: string, track_id: string) {
+  return request<{ success: boolean; message: string }>(`/feedback`, {
+    method: "POST",
+    body: JSON.stringify({ source_track_id, track_id, action: "reject" }),
+  });
+}
+
 export function getRecommendations(
   track_id: string,
   k: number,

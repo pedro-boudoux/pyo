@@ -5,7 +5,7 @@ from app.models import (
 )
 from app.db import get_cursor
 from app.ratelimit import limiter
-from app.services import lastfm, embeddings, ingest, colisten, blacklist, hybrid
+from app.services import lastfm, embeddings, ingest, colisten, blacklist, hybrid, steering
 from app.services.vector_utils import to_float_list
 from app.config import DEFAULT_K, RATE_LIMIT_HEAVY
 
@@ -113,9 +113,14 @@ def add_seed(request: Request, response: Response, body: SeedRequest):
             ON CONFLICT (track_id) DO UPDATE SET is_seed = true
         """, (body.track_id,))
 
+    # Re-seeding is an expansion of the same parent, so it deliberately honors
+    # that parent's persisted rejection state just like all three UI expansion
+    # methods: steer the query and hard-exclude exact rejected tracks.
+    rejected_ids = steering.get_rejected_track_ids(body.track_id)
+    query_vector = steering.apply_steering(vector, body.track_id)
     candidates = embeddings.ann_search(
-        vector,
-        exclude_ids=[body.track_id],
+        query_vector,
+        exclude_ids=[body.track_id, *rejected_ids],
         limit=DEFAULT_K,
     )
     # Never let a blocked artist become a graph node / edge.
@@ -123,7 +128,7 @@ def add_seed(request: Request, response: Response, body: SeedRequest):
 
     similar = lastfm.get_similar_tracks(artist, name, limit=SEED_SIMILAR_LIMIT)
     colisten.record_edges(artist, name, similar, source="track_similar")
-    seen_ids = {c["track_id"] for c in candidates} | {body.track_id}
+    seen_ids = {c["track_id"] for c in candidates} | {body.track_id} | rejected_ids
 
     # Variant dedupe: a clean/explicit/remastered edition of the seed, of an ANN
     # candidate, or of a song already on the graph shares a canonical_key but not
@@ -154,7 +159,7 @@ def add_seed(request: Request, response: Response, body: SeedRequest):
                 if song is None:
                     continue
 
-                similarity = embeddings.cosine_similarity(vector, song["embedding"])
+                similarity = embeddings.cosine_similarity(query_vector, song["embedding"])
                 candidates.append({"track_id": song["track_id"], "similarity": similarity})
                 seen_ids.add(song["track_id"])
                 seen_keys.add(sim_key)
