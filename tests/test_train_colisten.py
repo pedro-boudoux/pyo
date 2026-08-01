@@ -55,6 +55,14 @@ def test_canonical_schema_has_lifecycle_and_run_scoped_candidates():
     assert "hybrid_embedding   vector(512) NOT NULL" in schema
 
 
+def test_startup_backfill_never_mutates_a_real_candidate_snapshot():
+    startup = (REPO_ROOT / "app" / "db.py").read_text()
+
+    assert "SELECT 1 FROM model_run_vectors existing" in startup
+    assert "existing.model_run_id = run.id" in startup
+    assert "AND run.song_count IS NULL" in startup
+
+
 def _stub_run(monkeypatch, *, stage=None):
     monkeypatch.setattr(trainer, "model_lock", nullcontext)
     monkeypatch.setattr(trainer, "_fail_abandoned_runs", lambda: None)

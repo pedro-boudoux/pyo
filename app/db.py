@@ -286,8 +286,9 @@ def init_db():
         ALTER TABLE model_runs ADD CONSTRAINT model_runs_status_check
         CHECK (status IN ('running', 'candidate', 'validated', 'active', 'failed', 'superseded'))
     """)
-    # Preserve the currently served legacy run as a rollback-ready candidate.
-    # This is a local database copy and does not change either active song column.
+    # Preserve a pre-lifecycle active run as a rollback-ready candidate. Never
+    # append to a real immutable candidate on later startups: new songs may have
+    # appeared since its training snapshot.
     _try("""
         INSERT INTO model_run_vectors
             (model_run_id, track_id, colisten_embedding, hybrid_embedding,
@@ -297,6 +298,10 @@ def init_db():
         FROM model_runs run
         CROSS JOIN songs song
         WHERE run.status = 'active' AND song.hybrid_embedding IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM model_run_vectors existing
+              WHERE existing.model_run_id = run.id
+          )
         ON CONFLICT (model_run_id, track_id) DO NOTHING
     """)
     _try("""
@@ -310,6 +315,7 @@ def init_db():
             FROM model_run_vectors GROUP BY model_run_id
         ) candidate
         WHERE run.id = candidate.model_run_id AND run.status = 'active'
+          AND run.song_count IS NULL
     """)
 
     # Ensure unique constraints and indexes exist regardless of how the table was created
