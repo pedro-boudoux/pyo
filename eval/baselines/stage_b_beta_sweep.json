@@ -1,0 +1,73 @@
+{
+  "ground_truth": "eval/ground_truth_colisten.json",
+  "listener_cap": 500000,
+  "selected_beta": 2.0,
+  "selection": "highest recall@10 and MRR in the tested grid while remaining below the listener ceiling",
+  "results": [
+    {
+      "model": "stage_b_beta_0",
+      "k": 10,
+      "read_only": true,
+      "seeds_scored": 100,
+      "seeds_total": 100,
+      "coverage": 1.0,
+      "recall_at_10": 0.0167,
+      "mrr": 0.0141,
+      "intra_list_distance": 0.03,
+      "median_listeners": 119260.84,
+      "beta": 0.0
+    },
+    {
+      "model": "stage_b_beta_0.25",
+      "k": 10,
+      "read_only": true,
+      "seeds_scored": 100,
+      "seeds_total": 100,
+      "coverage": 1.0,
+      "recall_at_10": 0.0365,
+      "mrr": 0.0449,
+      "intra_list_distance": 0.0423,
+      "median_listeners": 203494.255,
+      "beta": 0.25
+    },
+    {
+      "model": "stage_b_beta_0.5",
+      "k": 10,
+      "read_only": true,
+      "seeds_scored": 100,
+      "seeds_total": 100,
+      "coverage": 1.0,
+      "recall_at_10": 0.0479,
+      "mrr": 0.0518,
+      "intra_list_distance": 0.0651,
+      "median_listeners": 240616.435,
+      "beta": 0.5
+    },
+    {
+      "model": "stage_b_beta_1",
+      "k": 10,
+      "read_only": true,
+      "seeds_scored": 100,
+      "seeds_total": 100,
+      "coverage": 1.0,
+      "recall_at_10": 0.0532,
+      "mrr": 0.0792,
+      "intra_list_distance": 0.0951,
+      "median_listeners": 254648.05,
+      "beta": 1.0
+    },
+    {
+      "model": "stage_b_beta_2",
+      "k": 10,
+      "read_only": true,
+      "seeds_scored": 100,
+      "seeds_total": 100,
+      "coverage": 1.0,
+      "recall_at_10": 0.0602,
+      "mrr": 0.1008,
+      "intra_list_distance": 0.1207,
+      "median_listeners": 268944.975,
+      "beta": 2.0
+    }
+  ]
+}

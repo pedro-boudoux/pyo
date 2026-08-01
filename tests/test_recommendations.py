@@ -559,6 +559,43 @@ class TestRecommendationsRouter:
         assert "not found" in response.json()["detail"].lower()
 
 
+class TestBuildRecommendations:
+    def test_local_ann_pool_enforces_underground_listener_ceiling(self, monkeypatch):
+        """The main ANN pool must honor the same ceiling as Last.fm top-up."""
+        from app.config import MAX_LISTENERS
+        from app.routers import recommendations as recs
+
+        calls = iter([
+            [{"name": "Seed", "artist": "Artist", "embedding": make_vector(dim=384)}],
+            [],
+        ])
+
+        @contextmanager
+        def fake_cursor():
+            yield FakeCursor(next(calls))
+
+        candidate = {
+            "track_id": "candidate",
+            "name": "Candidate",
+            "artist": "Another Artist",
+            "listeners": 10_000,
+            "image": None,
+            "embedding": make_vector(dim=384),
+            "similarity": 0.9,
+        }
+        ann_search = MagicMock(return_value=[candidate])
+
+        monkeypatch.setattr(recs, "get_cursor", fake_cursor)
+        monkeypatch.setattr(recs.steering, "apply_steering", lambda embedding, _: embedding)
+        monkeypatch.setattr(recs.embeddings, "ann_search", ann_search)
+        monkeypatch.setattr(recs, "mmr_rerank", lambda _query, pool, _k, _lambda: pool)
+
+        result = recs.build_recommendations("seed", k=1, include_tags=False)
+
+        assert len(result.recommendations) == 1
+        assert ann_search.call_args.kwargs["listeners_cap"] == MAX_LISTENERS
+
+
 # ---------------------------------------------------------------------------
 # _fetch_tags — batches songs.tags into the ordered tag list for the response
 # (issue #22: tags ship with recommendations so the popover needs no re-fetch).

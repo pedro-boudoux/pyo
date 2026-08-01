@@ -5,7 +5,14 @@ from app.ratelimit import limiter
 from app.services import steering, lastfm, ingest, embeddings, colisten, blacklist, hybrid
 from app.services.embeddings import mmr_rerank
 from app.services.vector_utils import to_float_list
-from app.config import DEFAULT_K, MMR_LAMBDA, MMR_POOL_MULTIPLIER, MMR_MAX_PER_ARTIST, RATE_LIMIT_HEAVY
+from app.config import (
+    DEFAULT_K,
+    MAX_LISTENERS,
+    MMR_LAMBDA,
+    MMR_POOL_MULTIPLIER,
+    MMR_MAX_PER_ARTIST,
+    RATE_LIMIT_HEAVY,
+)
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
@@ -165,6 +172,7 @@ def build_recommendations(
 
     pool = embeddings.ann_search(
         steered_embedding,
+        listeners_cap=MAX_LISTENERS,
         exclude_ids=exclude_ids,
         limit=k * MMR_POOL_MULTIPLIER,
     )

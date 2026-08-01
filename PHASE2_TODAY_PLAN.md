@@ -224,15 +224,20 @@ from nearby cross-artist tracks in 31 independently curated public Deezer
 playlists (92 unique seed artists). It does not use Last.fm `getSimilar`.
 `eval/sweep_beta.py` validates the fixture provenance before changing vectors.
 
-Stage A reference result against this fixture:
+Corrected capped Stage A reference result against this fixture:
 
 - Coverage: 100 / 100
-- Recall@10: 0.0403
-- MRR: 0.0336
-- Intra-list distance: 0.0273
-- Median listeners: 374,160
+- Recall@10: 0.0142
+- MRR: 0.0121
+- Intra-list distance: 0.0301
+- Median listeners: 119,062
 
 Recorded in `eval/baselines/stage_a_deezer_fixture.json`.
+
+The beta sweep exposed that the main ANN recommendation call was not passing
+`MAX_LISTENERS`, despite the documented 500k underground ceiling. The shared
+recommendation path now passes the cap into `ann_search`; the baseline and sweep
+were rerun after that fix, with no Last.fm top-up.
 
 Purpose: avoid circular grading. Stage B is trained from Last.fm-style similarity edges,
 so it should not be judged only against Last.fm `getSimilar`.
@@ -260,15 +265,28 @@ Coolify.
 
 ## Step 7 — Wire Hybrid Vector, Sweep Beta, Commit Result
 
-Status: hybrid storage/composition, zero fallback, HNSW index, model switch, rebuild
-job, and sweep command are implemented. Choosing beta and enabling production remain
-gated on Step 6 and the production training run.
+Status: production training and the independent capped beta sweep are complete.
+Beta `2.0` won the tested grid and all live hybrid vectors are currently built at
+that value. Production still serves the safe `stage_a` model until the separate
+Coolify cutover.
+
+Corrected sweep results (100 / 100 seeds at every beta):
+
+| Beta | Recall@10 | MRR | Intra-list distance | Median listeners |
+|---:|---:|---:|---:|---:|
+| 0 | 0.0167 | 0.0141 | 0.0300 | 119,261 |
+| 0.25 | 0.0365 | 0.0449 | 0.0423 | 203,494 |
+| 0.5 | 0.0479 | 0.0518 | 0.0651 | 240,616 |
+| 1 | 0.0532 | 0.0792 | 0.0951 | 254,648 |
+| **2** | **0.0602** | **0.1008** | **0.1207** | **268,945** |
+
+The full machine-readable result is
+`eval/baselines/stage_b_beta_sweep.json`.
 
 Periodic retraining belongs in a separate Coolify scheduled job/worker built from
 this repo with `requirements.txt` plus `requirements-jobs.txt`. It should inherit
-`DATABASE_URL` and the chosen `COLISTEN_BETA` from Coolify. Verify the database
-target and complete the first manual production training plus independent beta
-evaluation before enabling the schedule.
+`DATABASE_URL` and `COLISTEN_BETA=2` from Coolify. Verify the database target before
+enabling the schedule.
 
 Purpose: move from collected graph vectors to the live hybrid model.
 

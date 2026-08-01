@@ -610,7 +610,7 @@ LEGACY_EMBEDDING_DIM = 300     # old sparse vector, kept as embedding_legacy_300
 COLISTEN_EMBEDDING_DIM = 128
 HYBRID_EMBEDDING_DIM = 512
 RECOMMENDATION_MODEL = "stage_a"  # set hybrid only after gated eval/backfill
-COLISTEN_BETA       = 0.0      # selected by independent Stage B beta sweep
+COLISTEN_BETA       = 2.0      # winner of the independent Stage B beta sweep
 TAG_ENCODER_MODEL   = "sentence-transformers/all-MiniLM-L6-v2"  # fastembed ONNX, CPU, no torch
 MMR_LAMBDA          = 0.7      # relevance vs diversity (1.0 = pure relevance)
 MMR_POOL_MULTIPLIER = 3        # over-fetch k × this before re-ranking

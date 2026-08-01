@@ -160,6 +160,9 @@ make build-colisten-ground-truth
 The committed fixture is `eval/ground_truth_colisten.json`; its Stage A reference
 result is `eval/baselines/stage_a_deezer_fixture.json`. `eval/sweep_beta.py`
 validates the fixture provenance and rejects circular Last.fm-derived input.
+The production sweep selected `COLISTEN_BETA=2.0`; its complete metrics are in
+`eval/baselines/stage_b_beta_sweep.json`. Production remains on `stage_a` until
+the separate model cutover.
 
 You'll need a free Last.fm API key from [last.fm/api](https://www.last.fm/api),
 dropped into a `.env`:

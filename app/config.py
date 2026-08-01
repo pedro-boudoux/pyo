@@ -63,15 +63,15 @@ LEGACY_EMBEDDING_DIM = 300
 COLISTEN_EMBEDDING_DIM = 128
 HYBRID_EMBEDDING_DIM = TAG_EMBEDDING_DIM + COLISTEN_EMBEDDING_DIM
 
-# Phase 2 model selection. Stage A remains the safe default until the independent
-# co-listening eval chooses a beta and the production hybrid backfill completes.
+# Phase 2 model selection. Stage A remains the safe default until the production
+# hybrid cutover. The independent Deezer-fixture sweep selected beta=2.0.
 # Setting RECOMMENDATION_MODEL=hybrid switches ANN, MMR, steering and playlists to
 # songs.hybrid_embedding; the original songs.embedding vector(384) stays intact as
 # an instant rollback path.
 RECOMMENDATION_MODEL = os.getenv("RECOMMENDATION_MODEL", "stage_a").strip().lower()
 if RECOMMENDATION_MODEL not in ("stage_a", "hybrid"):
     RECOMMENDATION_MODEL = "stage_a"
-COLISTEN_BETA = float(os.getenv("COLISTEN_BETA", "0"))
+COLISTEN_BETA = float(os.getenv("COLISTEN_BETA", "2"))
 COLISTEN_MIN_NODES = int(os.getenv("COLISTEN_MIN_NODES", "20000"))
 COLISTEN_MIN_AVG_DEGREE = float(os.getenv("COLISTEN_MIN_AVG_DEGREE", "8"))
 
