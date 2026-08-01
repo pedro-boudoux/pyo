@@ -47,9 +47,14 @@ Finding "songs like this one" starts as a nearest-neighbor search, but the loop 
 Dropping a seed is not one query. pyo runs the local ANN search, then:
 
 1. Pulls the seed's `track.getSimilar` (up to 25 tracks) and embeds them.
-2. Expands recursively. It takes the top three candidates, pulls *their* similar tracks (up to 10 each), and embeds those too. This thickens the neighborhood so playlist branches do not drift into unrelated music.
-3. Falls back to similar artists' top tracks when the seed is too obscure for step 1.
-4. Keeps the top 10 by similarity and writes the edges.
+2. Merges those tracks with the hybrid ANN candidates.
+3. Keeps the top 10 by similarity and writes the edges.
+
+The older recursive expansion and similar-artist seed fallback were independently
+ablated in issue #35. On identical production snapshots they added no quality or
+cold-seed coverage, while recursion added 794 Last.fm calls across 24 seeds and
+about 6.7 seconds of mean seed latency. The recommendation exhaustion path still
+has its own similar-artist fallback when a requested list cannot otherwise fill.
 
 The result is a graph that branches the way taste actually branches, not a flat "more like this" list.
 

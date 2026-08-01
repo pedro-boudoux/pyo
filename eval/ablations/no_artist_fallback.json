@@ -1,0 +1,2825 @@
+{
+  "issue": 35,
+  "variant": "no_artist_fallback",
+  "options": {
+    "recursive_expansion": true,
+    "artist_fallback": false
+  },
+  "generated_at": "2026-08-01T05:13:28.003070+00:00",
+  "database_snapshot": {
+    "songs": 28100,
+    "embedded_songs": 19135,
+    "newest_song": "2026-08-01 04:38:41.422339+00",
+    "colisten_edges": 741257,
+    "newest_colisten_edge": "2026-08-01 04:38:31.908793+00",
+    "recommendation_model": "hybrid_embedding"
+  },
+  "fixtures": {
+    "independent": "eval/ground_truth_colisten.json",
+    "curated_cold": "eval/cold_start_seeds.json",
+    "independent_limit": 10
+  },
+  "k": 10,
+  "summary": {
+    "seeds_total": 24,
+    "seeds_scored": 24,
+    "errors": [],
+    "seed_coverage": 1.0,
+    "independent_quality": {
+      "seeds": 10,
+      "recall_at_10": 0.113,
+      "mrr": 0.1792
+    },
+    "recommendation_coverage": {
+      "any": 1.0,
+      "at_least_10": 1.0,
+      "mean_candidates": 10.0
+    },
+    "cold_seed_coverage": {
+      "seeds": 8,
+      "any": 1.0,
+      "at_least_10": 1.0,
+      "mean_candidates": 10.0
+    },
+    "obscure_seed_coverage": {
+      "seeds": 14,
+      "any": 1.0,
+      "mean_candidates": 10.0
+    },
+    "lastfm": {
+      "total_calls": 1831,
+      "calls_by_method": {
+        "artist.getSimilar": 205,
+        "artist.getTopTags": 1120,
+        "track.getInfo": 205,
+        "track.getSimilar": 96,
+        "track.getTopTags": 205
+      },
+      "mean_calls_per_seed": 76.2917
+    },
+    "seed_latency_ms": {
+      "mean": 11207.9519,
+      "median": 9711.368
+    },
+    "graph_branching": {
+      "mean_degree": 10.0,
+      "mean_unique_artists": 5.2083,
+      "mean_expansion_selected": 0.7083
+    },
+    "mechanism_activity": {
+      "recursive_expansion_selected": 17,
+      "artist_fallback_attempted_seeds": 0,
+      "artist_fallback_selected": 0
+    },
+    "listener_policy": {
+      "mode": "uncapped",
+      "legacy_cap": 500000,
+      "returned_above_legacy_cap": 45,
+      "max_returned_listeners": 2877445
+    }
+  },
+  "seeds": [
+    {
+      "seed_track_id": "01c7e540b99a13d34a1c",
+      "name": "half return",
+      "artist": "Adrianne Lenker",
+      "seed_listeners": 592412,
+      "cohort": "independent_quality",
+      "targets": [
+        "1cf5e208b91e9ebaf746",
+        "961d89661e9e8d882291",
+        "a153620e1447a2ac893c",
+        "b94cec24c542346a20e7"
+      ],
+      "recall": 0.0,
+      "mrr": 0.0,
+      "latency_ms": 10839.054,
+      "lastfm_calls": {
+        "artist.getSimilar": 9,
+        "artist.getTopTags": 46,
+        "track.getInfo": 9,
+        "track.getSimilar": 4,
+        "track.getTopTags": 9
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1091.788,
+        "artist.getTopTags": 4596.341,
+        "track.getInfo": 759.011,
+        "track.getSimilar": 547.621,
+        "track.getTopTags": 774.68
+      },
+      "unique_artists": 7,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "b11b9360480f5939a3e2",
+          "name": "forwards beckon rebound",
+          "artist": "Adrianne Lenker",
+          "listeners": 634143,
+          "similarity": 0.91,
+          "source": "ann"
+        },
+        {
+          "track_id": "dbc71a82efa9232ee6dc",
+          "name": "anything",
+          "artist": "Adrianne Lenker",
+          "listeners": 905928,
+          "similarity": 0.893,
+          "source": "ann"
+        },
+        {
+          "track_id": "e720a840208a1f79dcfc",
+          "name": "we'll never have sex",
+          "artist": "Leith Ross",
+          "listeners": 731198,
+          "similarity": 0.883,
+          "source": "ann"
+        },
+        {
+          "track_id": "c717ff0b5b5e4a47f910",
+          "name": "Suite: Jonny",
+          "artist": "Faye Webster",
+          "listeners": 99368,
+          "similarity": 0.873,
+          "source": "ann"
+        },
+        {
+          "track_id": "ebf627f1e7ccead5e05f",
+          "name": "not a lot, just forever",
+          "artist": "Adrianne Lenker",
+          "listeners": 765624,
+          "similarity": 0.871,
+          "source": "ann"
+        },
+        {
+          "track_id": "d3cccfc0fb4145e9291d",
+          "name": "For Emma",
+          "artist": "Bon Iver",
+          "listeners": 1165647,
+          "similarity": 0.869,
+          "source": "ann"
+        },
+        {
+          "track_id": "056becd2f31c9d0e3fe8",
+          "name": "All of Me Wants All of You",
+          "artist": "Sufjan Stevens",
+          "listeners": 428770,
+          "similarity": 0.867,
+          "source": "ann"
+        },
+        {
+          "track_id": "22bcaa2849b3d5c1d007",
+          "name": "Towers",
+          "artist": "Bon Iver",
+          "listeners": 697769,
+          "similarity": 0.864,
+          "source": "ann"
+        },
+        {
+          "track_id": "d5fad1da49804001d0f8",
+          "name": "Exit Vendor",
+          "artist": "Joanne Robertson",
+          "listeners": 22693,
+          "similarity": 0.864,
+          "source": "ann"
+        },
+        {
+          "track_id": "56e86b2ddf817abec798",
+          "name": "King of Carrot Flowers Pt. 1",
+          "artist": "Neutral Milk Hotel",
+          "listeners": 688878,
+          "similarity": 0.859,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "042fb66c40b6d60c921d",
+      "name": "Fade to Grey",
+      "artist": "Visage",
+      "seed_listeners": 454075,
+      "cohort": "independent_quality",
+      "targets": [
+        "0c0ee38a43d62adb751a",
+        "26071051d93cad13d9ac",
+        "6d2fbd5b45632f4d14a4",
+        "73392798190f729f4a8e",
+        "c71d4d094c630e637ad3",
+        "cc1dbe270a3f231498ab",
+        "d78a87ed101024421658"
+      ],
+      "recall": 0.2857142857142857,
+      "mrr": 0.5,
+      "latency_ms": 19684.552,
+      "lastfm_calls": {
+        "artist.getSimilar": 16,
+        "artist.getTopTags": 88,
+        "track.getInfo": 16,
+        "track.getSimilar": 4,
+        "track.getTopTags": 16
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1584.313,
+        "artist.getTopTags": 8215.597,
+        "track.getInfo": 2013.163,
+        "track.getSimilar": 1051.081,
+        "track.getTopTags": 1474.592
+      },
+      "unique_artists": 9,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "4105dfb6668546100108",
+          "name": "Don't Go",
+          "artist": "Yazoo",
+          "listeners": 479130,
+          "similarity": 0.943,
+          "source": "ann"
+        },
+        {
+          "track_id": "c71d4d094c630e637ad3",
+          "name": "Enola Gay",
+          "artist": "Orchestral Manoeuvres in the Dark",
+          "listeners": 330655,
+          "similarity": 0.943,
+          "source": "ann"
+        },
+        {
+          "track_id": "d17c1d0c83afc67a2502",
+          "name": "Planet Earth",
+          "artist": "Duran Duran",
+          "listeners": 168386,
+          "similarity": 0.939,
+          "source": "ann"
+        },
+        {
+          "track_id": "e9059a2ca025f2cd3357",
+          "name": "Temptation",
+          "artist": "Heaven 17",
+          "listeners": 203466,
+          "similarity": 0.939,
+          "source": "ann"
+        },
+        {
+          "track_id": "d6ebf7228ec9e0ed965e",
+          "name": "Dancing with Tears in My Eyes",
+          "artist": "Ultravox",
+          "listeners": 369876,
+          "similarity": 0.938,
+          "source": "ann"
+        },
+        {
+          "track_id": "8264b8647701ee62b79a",
+          "name": "Too Shy",
+          "artist": "Kajagoogoo",
+          "listeners": 426638,
+          "similarity": 0.927,
+          "source": "ann"
+        },
+        {
+          "track_id": "e6ec8d2da318ae89246c",
+          "name": "Cars",
+          "artist": "Gary Numan",
+          "listeners": 648162,
+          "similarity": 0.921,
+          "source": "ann"
+        },
+        {
+          "track_id": "cc1dbe270a3f231498ab",
+          "name": "Blue Monday '88",
+          "artist": "New Order",
+          "listeners": 483334,
+          "similarity": 0.919,
+          "source": "ann"
+        },
+        {
+          "track_id": "04bca2ba3ee3f7b523be",
+          "name": "Relax",
+          "artist": "Frankie Goes to Hollywood",
+          "listeners": 661269,
+          "similarity": 0.918,
+          "source": "ann"
+        },
+        {
+          "track_id": "568705c6244c79fe823f",
+          "name": "World in Motion",
+          "artist": "New Order",
+          "listeners": 167058,
+          "similarity": 0.918,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "0459b1098ceb577b660d",
+      "name": "Town Called Malice",
+      "artist": "The Jam",
+      "seed_listeners": 583352,
+      "cohort": "independent_quality",
+      "targets": [
+        "0f3dea69b1a0786e38be",
+        "1387e974f1f2d4f45fc2",
+        "26a8ce1a9dbb35df8c3c",
+        "64a689f61e8c839408a8",
+        "8264b8647701ee62b79a",
+        "9829da728c64acb4132d",
+        "a6f6288606708c75c9b9",
+        "d6ebf7228ec9e0ed965e",
+        "d72b710416a5cd7e356b"
+      ],
+      "recall": 0.1111111111111111,
+      "mrr": 0.125,
+      "latency_ms": 19694.26,
+      "lastfm_calls": {
+        "artist.getSimilar": 17,
+        "artist.getTopTags": 83,
+        "track.getInfo": 17,
+        "track.getSimilar": 4,
+        "track.getTopTags": 17
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1929.336,
+        "artist.getTopTags": 8195.856,
+        "track.getInfo": 1982.521,
+        "track.getSimilar": 570.087,
+        "track.getTopTags": 1560.596
+      },
+      "unique_artists": 6,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "13e724e006490a96bf65",
+          "name": "Pretty in Pink",
+          "artist": "The Psychedelic Furs",
+          "listeners": 419724,
+          "similarity": 0.884,
+          "source": "ann"
+        },
+        {
+          "track_id": "8b3b260b0c02b271422c",
+          "name": "Up The Junction",
+          "artist": "Squeeze",
+          "listeners": 248888,
+          "similarity": 0.878,
+          "source": "ann"
+        },
+        {
+          "track_id": "992fb59099960618329c",
+          "name": "And She Was",
+          "artist": "Talking Heads",
+          "listeners": 407308,
+          "similarity": 0.878,
+          "source": "ann"
+        },
+        {
+          "track_id": "e54534b8f6a322fe9305",
+          "name": "Cool For Cats",
+          "artist": "Squeeze",
+          "listeners": 209481,
+          "similarity": 0.872,
+          "source": "ann"
+        },
+        {
+          "track_id": "4a0de6886285b7f781e1",
+          "name": "Golden Brown",
+          "artist": "The Stranglers",
+          "listeners": 1385679,
+          "similarity": 0.865,
+          "source": "ann"
+        },
+        {
+          "track_id": "d78a87ed101024421658",
+          "name": "Don't You (Forget About Me)",
+          "artist": "Simple Minds",
+          "listeners": 1273525,
+          "similarity": 0.863,
+          "source": "ann"
+        },
+        {
+          "track_id": "3efe1b4e6b37c4e2ea54",
+          "name": "Road to Nowhere",
+          "artist": "Talking Heads",
+          "listeners": 404498,
+          "similarity": 0.86,
+          "source": "ann"
+        },
+        {
+          "track_id": "26a8ce1a9dbb35df8c3c",
+          "name": "Love My Way",
+          "artist": "The Psychedelic Furs",
+          "listeners": 888931,
+          "similarity": 0.857,
+          "source": "ann"
+        },
+        {
+          "track_id": "d18d91f7959e8e04543a",
+          "name": "Making Plans for Nigel",
+          "artist": "XTC",
+          "listeners": 423399,
+          "similarity": 0.856,
+          "source": "ann"
+        },
+        {
+          "track_id": "96e747aff28e41fbe21e",
+          "name": "Psycho Killer",
+          "artist": "Talking Heads",
+          "listeners": 1207630,
+          "similarity": 0.854,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "066452dd244935bfe2f5",
+      "name": "La Belle De Jour",
+      "artist": "Alceu Valen\u00e7a",
+      "seed_listeners": 246484,
+      "cohort": "independent_quality",
+      "targets": [
+        "18fca088f91e9629eefa",
+        "66033a9b7b3ed4bfbde4",
+        "e3a2aebaf962bf8055c9"
+      ],
+      "recall": 0.0,
+      "mrr": 0.0,
+      "latency_ms": 8952.662,
+      "lastfm_calls": {
+        "artist.getSimilar": 7,
+        "artist.getTopTags": 38,
+        "track.getInfo": 7,
+        "track.getSimilar": 4,
+        "track.getTopTags": 7
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 962.901,
+        "artist.getTopTags": 3919.436,
+        "track.getInfo": 895.065,
+        "track.getSimilar": 416.395,
+        "track.getTopTags": 544.194
+      },
+      "unique_artists": 8,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "19fd996c3f3da8305aff",
+          "name": "Velha Inf\u00e2ncia",
+          "artist": "Tribalistas",
+          "listeners": 49909,
+          "similarity": 0.957,
+          "source": "ann"
+        },
+        {
+          "track_id": "ae1fc76d2ef2233f0adb",
+          "name": "Tropicana (Morena Tropicana)",
+          "artist": "Alceu Valen\u00e7a",
+          "listeners": 242400,
+          "similarity": 0.954,
+          "source": "ann"
+        },
+        {
+          "track_id": "7ada5d55e6198e004717",
+          "name": "Sina",
+          "artist": "Djavan",
+          "listeners": 225351,
+          "similarity": 0.949,
+          "source": "ann"
+        },
+        {
+          "track_id": "c49a776271db8ac0f38d",
+          "name": "Velha Roupa Colorida",
+          "artist": "Belchior",
+          "listeners": 80365,
+          "similarity": 0.947,
+          "source": "ann"
+        },
+        {
+          "track_id": "3f2586d7efaeabc2abec",
+          "name": "Boa Sorte / Good Luck (feat. Ben Harper)",
+          "artist": "Vanessa da Mata",
+          "listeners": 183083,
+          "similarity": 0.94,
+          "source": "ann"
+        },
+        {
+          "track_id": "256250d3fc00c68d2370",
+          "name": "N\u00e3o V\u00e1 Embora",
+          "artist": "Marisa Monte",
+          "listeners": 19516,
+          "similarity": 0.939,
+          "source": "ann"
+        },
+        {
+          "track_id": "baa0e9abc13670b75617",
+          "name": "Poema",
+          "artist": "Ney Matogrosso",
+          "listeners": 240915,
+          "similarity": 0.937,
+          "source": "ann"
+        },
+        {
+          "track_id": "135ecea867ebd247643c",
+          "name": "Flor De Tangerina",
+          "artist": "Alceu Valen\u00e7a",
+          "listeners": 180284,
+          "similarity": 0.936,
+          "source": "ann"
+        },
+        {
+          "track_id": "8dc6fe416fb2300614e5",
+          "name": "Lan\u00e7a Perfume",
+          "artist": "Rita Lee",
+          "listeners": 404399,
+          "similarity": 0.933,
+          "source": "ann"
+        },
+        {
+          "track_id": "1ab274e134b629b563fa",
+          "name": "J\u00e1 Sei Namorar",
+          "artist": "Tribalistas",
+          "listeners": 88812,
+          "similarity": 0.933,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "06e8be4971ddd506dd67",
+      "name": "Not My Baby",
+      "artist": "Alvvays",
+      "seed_listeners": 320185,
+      "cohort": "independent_quality",
+      "targets": [
+        "4a5396f3a2c04254cb82",
+        "7d297dd83a9c6e2eb873",
+        "bff0f3c3e835b15e6a61"
+      ],
+      "recall": 0.0,
+      "mrr": 0.0,
+      "latency_ms": 13671.31,
+      "lastfm_calls": {
+        "artist.getSimilar": 11,
+        "artist.getTopTags": 61,
+        "track.getInfo": 11,
+        "track.getSimilar": 4,
+        "track.getTopTags": 11
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1297.865,
+        "artist.getTopTags": 5773.578,
+        "track.getInfo": 1059.961,
+        "track.getSimilar": 1101.256,
+        "track.getTopTags": 1127.656
+      },
+      "unique_artists": 6,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "56885145c6a40c810ac9",
+          "name": "Dreams Tonite",
+          "artist": "Alvvays",
+          "listeners": 602035,
+          "similarity": 0.899,
+          "source": "ann"
+        },
+        {
+          "track_id": "9da6c78d910d1b6cbb1b",
+          "name": "In Undertow",
+          "artist": "Alvvays",
+          "listeners": 334423,
+          "similarity": 0.867,
+          "source": "ann"
+        },
+        {
+          "track_id": "548cf028ce34613505fe",
+          "name": "Everybody Wants To Love You",
+          "artist": "Japanese Breakfast",
+          "listeners": 381494,
+          "similarity": 0.851,
+          "source": "ann"
+        },
+        {
+          "track_id": "6e4d758e27aa8d38f3ce",
+          "name": "Boyish",
+          "artist": "Japanese Breakfast",
+          "listeners": 448085,
+          "similarity": 0.847,
+          "source": "ann"
+        },
+        {
+          "track_id": "3327f8584927e204de14",
+          "name": "Plimsoll Punks",
+          "artist": "Alvvays",
+          "listeners": 161556,
+          "similarity": 0.842,
+          "source": "ann"
+        },
+        {
+          "track_id": "aba302a9c373d2dd2ac6",
+          "name": "Saved By A Waif",
+          "artist": "Alvvays",
+          "listeners": 157530,
+          "similarity": 0.841,
+          "source": "ann"
+        },
+        {
+          "track_id": "a18f9d2b9b720b6b6b20",
+          "name": "Myth",
+          "artist": "Beach House",
+          "listeners": 1248651,
+          "similarity": 0.83,
+          "source": "ann"
+        },
+        {
+          "track_id": "21ce440dfe3a3b6af4ff",
+          "name": "Teenage Blue",
+          "artist": "Dreamgirl",
+          "listeners": 424251,
+          "similarity": 0.817,
+          "source": "ann"
+        },
+        {
+          "track_id": "b4b2d09fd10954b29bd8",
+          "name": "Yam Yam",
+          "artist": "No Vacation",
+          "listeners": 596987,
+          "similarity": 0.815,
+          "source": "ann"
+        },
+        {
+          "track_id": "25a0e3d3318807f9cb14",
+          "name": "Nosebleed Seats",
+          "artist": "Vansire",
+          "listeners": 183520,
+          "similarity": 0.814,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "07e303b65caa5ce9123f",
+      "name": "Love Shack",
+      "artist": "The B-52's",
+      "seed_listeners": 722241,
+      "cohort": "independent_quality",
+      "targets": [
+        "0f3dea69b1a0786e38be",
+        "123d121a325ad360abe2",
+        "3184e4deb5ca145059b7",
+        "923e85f553c3fdbe5ae6",
+        "a6f6288606708c75c9b9",
+        "b1a3179bf3800bce5129",
+        "e6ec8d2da318ae89246c"
+      ],
+      "recall": 0.0,
+      "mrr": 0.0,
+      "latency_ms": 6610.482,
+      "lastfm_calls": {
+        "artist.getSimilar": 5,
+        "artist.getTopTags": 26,
+        "track.getInfo": 5,
+        "track.getSimilar": 4,
+        "track.getTopTags": 5
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 626.886,
+        "artist.getTopTags": 2676.499,
+        "track.getInfo": 435.154,
+        "track.getSimilar": 659.073,
+        "track.getTopTags": 464.85
+      },
+      "unique_artists": 10,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "8d2f2ee2be0bf32309ad",
+          "name": "Video Killed the Radio Star",
+          "artist": "The Buggles",
+          "listeners": 1020138,
+          "similarity": 0.92,
+          "source": "ann"
+        },
+        {
+          "track_id": "d96a06ec80ecd733c727",
+          "name": "Hungry Like the Wolf",
+          "artist": "Duran Duran",
+          "listeners": 597693,
+          "similarity": 0.918,
+          "source": "ann"
+        },
+        {
+          "track_id": "c7beb7c4248211ca147d",
+          "name": "Come on Eileen",
+          "artist": "Dexys Midnight Runners",
+          "listeners": 1303475,
+          "similarity": 0.917,
+          "source": "ann"
+        },
+        {
+          "track_id": "fa92bf7fd1f0a3d1e6a6",
+          "name": "Everybody Wants to Rule the World",
+          "artist": "Tears for Fears",
+          "listeners": 2877445,
+          "similarity": 0.917,
+          "source": "ann"
+        },
+        {
+          "track_id": "d78a87ed101024421658",
+          "name": "Don't You (Forget About Me)",
+          "artist": "Simple Minds",
+          "listeners": 1273525,
+          "similarity": 0.916,
+          "source": "ann"
+        },
+        {
+          "track_id": "37475a96a26f9913f5d9",
+          "name": "You Spin Me Round (Like a Record)",
+          "artist": "Dead or Alive",
+          "listeners": 1164564,
+          "similarity": 0.913,
+          "source": "ann"
+        },
+        {
+          "track_id": "bb3da4d741ecd0012951",
+          "name": "She Drives Me Crazy",
+          "artist": "Fine Young Cannibals",
+          "listeners": 657232,
+          "similarity": 0.913,
+          "source": "ann"
+        },
+        {
+          "track_id": "5ced51ce8bb3f5d2ace4",
+          "name": "Who Can It Be Now?",
+          "artist": "Men at Work",
+          "listeners": 968814,
+          "similarity": 0.912,
+          "source": "ann"
+        },
+        {
+          "track_id": "877f5db95d6468e7a5ec",
+          "name": "Dance Hall Days",
+          "artist": "Wang Chung",
+          "listeners": 415345,
+          "similarity": 0.912,
+          "source": "ann"
+        },
+        {
+          "track_id": "04bca2ba3ee3f7b523be",
+          "name": "Relax",
+          "artist": "Frankie Goes to Hollywood",
+          "listeners": 661269,
+          "similarity": 0.911,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "08cc0c6ce343a4f0c8dd",
+      "name": "Aquele Abra\u00e7o",
+      "artist": "Gilberto Gil",
+      "seed_listeners": 148381,
+      "cohort": "independent_quality",
+      "targets": [
+        "1cc3ef80adcfdc43a115",
+        "25c9826974f08b7593c8",
+        "4e96be8804cc296a7ac2",
+        "ac8b53b920daa5df9bb4"
+      ],
+      "recall": 0.0,
+      "mrr": 0.0,
+      "latency_ms": 15911.991,
+      "lastfm_calls": {
+        "artist.getSimilar": 11,
+        "artist.getTopTags": 66,
+        "track.getInfo": 11,
+        "track.getSimilar": 4,
+        "track.getTopTags": 11
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1069.161,
+        "artist.getTopTags": 7283.438,
+        "track.getInfo": 2492.133,
+        "track.getSimilar": 529.556,
+        "track.getTopTags": 892.247
+      },
+      "unique_artists": 6,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "26e4d337b26a337ab1f6",
+          "name": "Brasil Pandeiro",
+          "artist": "Novos Baianos",
+          "listeners": 268686,
+          "similarity": 0.947,
+          "source": "ann"
+        },
+        {
+          "track_id": "ec36eac8ebf4fcf16196",
+          "name": "Andar Com F\u00e9",
+          "artist": "Gilberto Gil",
+          "listeners": 158453,
+          "similarity": 0.94,
+          "source": "ann"
+        },
+        {
+          "track_id": "df0b1343243806efd762",
+          "name": "Apesar de voc\u00ea",
+          "artist": "Chico Buarque",
+          "listeners": 362552,
+          "similarity": 0.925,
+          "source": "ann"
+        },
+        {
+          "track_id": "8c40f17b34903b34b9f6",
+          "name": "Balan\u00e7a Pema",
+          "artist": "Jorge Ben",
+          "listeners": 23311,
+          "similarity": 0.923,
+          "source": "ann"
+        },
+        {
+          "track_id": "1342cfd2a72491496cd3",
+          "name": "Bandido Coraz\u00f3n",
+          "artist": "Ney Matogrosso",
+          "listeners": 65815,
+          "similarity": 0.922,
+          "source": "ann"
+        },
+        {
+          "track_id": "fb3e0737f177007d9c93",
+          "name": "Refazenda",
+          "artist": "Gilberto Gil",
+          "listeners": 73664,
+          "similarity": 0.92,
+          "source": "ann"
+        },
+        {
+          "track_id": "08096b5ea5689bf4c7cc",
+          "name": "Samba De Orly",
+          "artist": "Chico Buarque",
+          "listeners": 140773,
+          "similarity": 0.919,
+          "source": "ann"
+        },
+        {
+          "track_id": "f329123db04784e2a44a",
+          "name": "Odara",
+          "artist": "Caetano Veloso",
+          "listeners": 107488,
+          "similarity": 0.918,
+          "source": "ann"
+        },
+        {
+          "track_id": "91f952cd0249edba16fc",
+          "name": "Preta Pretinha",
+          "artist": "Novos Baianos",
+          "listeners": 187995,
+          "similarity": 0.917,
+          "source": "ann"
+        },
+        {
+          "track_id": "44e50b0e032f3948a64f",
+          "name": "Queixa",
+          "artist": "Caetano Veloso",
+          "listeners": 118276,
+          "similarity": 0.916,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "0c0ee38a43d62adb751a",
+      "name": "Tainted Love",
+      "artist": "Soft Cell",
+      "seed_listeners": 1971176,
+      "cohort": "independent_quality",
+      "targets": [
+        "042fb66c40b6d60c921d",
+        "2e7f686cf032edab9f24",
+        "c71d4d094c630e637ad3",
+        "cc1dbe270a3f231498ab",
+        "d78a87ed101024421658",
+        "f11c610c11fd9c00c68e"
+      ],
+      "recall": 0.3333333333333333,
+      "mrr": 0.16666666666666666,
+      "latency_ms": 4386.856,
+      "lastfm_calls": {
+        "artist.getSimilar": 3,
+        "artist.getTopTags": 14,
+        "track.getInfo": 3,
+        "track.getSimilar": 4,
+        "track.getTopTags": 3
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 323.611,
+        "artist.getTopTags": 1216.475,
+        "track.getInfo": 270.208,
+        "track.getSimilar": 1140.082,
+        "track.getTopTags": 252.171
+      },
+      "unique_artists": 10,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "73392798190f729f4a8e",
+          "name": "Don't You Want Me",
+          "artist": "The Human League",
+          "listeners": 1162080,
+          "similarity": 0.943,
+          "source": "ann"
+        },
+        {
+          "track_id": "9829da728c64acb4132d",
+          "name": "Smalltown Boy",
+          "artist": "Bronski Beat",
+          "listeners": 1071448,
+          "similarity": 0.942,
+          "source": "ann"
+        },
+        {
+          "track_id": "8264b8647701ee62b79a",
+          "name": "Too Shy",
+          "artist": "Kajagoogoo",
+          "listeners": 426638,
+          "similarity": 0.937,
+          "source": "ann"
+        },
+        {
+          "track_id": "4105dfb6668546100108",
+          "name": "Don't Go",
+          "artist": "Yazoo",
+          "listeners": 479130,
+          "similarity": 0.934,
+          "source": "ann"
+        },
+        {
+          "track_id": "37475a96a26f9913f5d9",
+          "name": "You Spin Me Round (Like a Record)",
+          "artist": "Dead or Alive",
+          "listeners": 1164564,
+          "similarity": 0.931,
+          "source": "ann"
+        },
+        {
+          "track_id": "c71d4d094c630e637ad3",
+          "name": "Enola Gay",
+          "artist": "Orchestral Manoeuvres in the Dark",
+          "listeners": 330655,
+          "similarity": 0.926,
+          "source": "ann"
+        },
+        {
+          "track_id": "cc1dbe270a3f231498ab",
+          "name": "Blue Monday '88",
+          "artist": "New Order",
+          "listeners": 483334,
+          "similarity": 0.926,
+          "source": "ann"
+        },
+        {
+          "track_id": "4adba946a0bcb8b2cc93",
+          "name": "Karma Chameleon",
+          "artist": "Culture Club",
+          "listeners": 732113,
+          "similarity": 0.925,
+          "source": "ann"
+        },
+        {
+          "track_id": "04bca2ba3ee3f7b523be",
+          "name": "Relax",
+          "artist": "Frankie Goes to Hollywood",
+          "listeners": 661269,
+          "similarity": 0.925,
+          "source": "ann"
+        },
+        {
+          "track_id": "d72b710416a5cd7e356b",
+          "name": "Just Can't Get Enough",
+          "artist": "Depeche Mode",
+          "listeners": 1038593,
+          "similarity": 0.924,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "0d9b891074ddf19b87cc",
+      "name": "In Too Deep",
+      "artist": "Sum 41",
+      "seed_listeners": 1437919,
+      "cohort": "independent_quality",
+      "targets": [
+        "14461e9335e19ddce63d",
+        "4f89710bd3c1d416d9be",
+        "97598a58874835d382b0",
+        "a7d266f8a0af8f565f58",
+        "d2ff7cb41e7d029bcb96"
+      ],
+      "recall": 0.4,
+      "mrr": 1.0,
+      "latency_ms": 16319.775,
+      "lastfm_calls": {
+        "artist.getSimilar": 13,
+        "artist.getTopTags": 76,
+        "track.getInfo": 13,
+        "track.getSimilar": 4,
+        "track.getTopTags": 13
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1560.842,
+        "artist.getTopTags": 7508.875,
+        "track.getInfo": 1276.68,
+        "track.getSimilar": 605.002,
+        "track.getTopTags": 1246.023
+      },
+      "unique_artists": 7,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "d2ff7cb41e7d029bcb96",
+          "name": "The Anthem",
+          "artist": "Good Charlotte",
+          "listeners": 1115869,
+          "similarity": 0.949,
+          "source": "ann"
+        },
+        {
+          "track_id": "0f99cde3b818931bf65a",
+          "name": "Fat Lip",
+          "artist": "Sum 41",
+          "listeners": 1386517,
+          "similarity": 0.945,
+          "source": "ann"
+        },
+        {
+          "track_id": "3e1243cfbbb873979c36",
+          "name": "What's My Age Again?",
+          "artist": "blink-182",
+          "listeners": 1731238,
+          "similarity": 0.945,
+          "source": "ann"
+        },
+        {
+          "track_id": "4f89710bd3c1d416d9be",
+          "name": "Lifestyles of the Rich & Famous",
+          "artist": "Good Charlotte",
+          "listeners": 475477,
+          "similarity": 0.944,
+          "source": "ann"
+        },
+        {
+          "track_id": "4ac2295ae05e63eb07fb",
+          "name": "1985",
+          "artist": "Bowling for Soup",
+          "listeners": 923611,
+          "similarity": 0.943,
+          "source": "ann"
+        },
+        {
+          "track_id": "dd00d3cd5902fb7d9ba7",
+          "name": "All the Small Things",
+          "artist": "blink-182",
+          "listeners": 2337238,
+          "similarity": 0.942,
+          "source": "ann"
+        },
+        {
+          "track_id": "55d56ec4aeba879cd840",
+          "name": "Ocean Avenue",
+          "artist": "Yellowcard",
+          "listeners": 1127081,
+          "similarity": 0.941,
+          "source": "ann"
+        },
+        {
+          "track_id": "3f22c04e42d112bdd2db",
+          "name": "The Kids Aren't Alright",
+          "artist": "The Offspring",
+          "listeners": 1910234,
+          "similarity": 0.929,
+          "source": "ann"
+        },
+        {
+          "track_id": "61a87dee3e1479c883ef",
+          "name": "Want You Bad",
+          "artist": "The Offspring",
+          "listeners": 908834,
+          "similarity": 0.925,
+          "source": "ann"
+        },
+        {
+          "track_id": "8b814a986c88a5805c4c",
+          "name": "Dirty Little Secret",
+          "artist": "The All-American Rejects",
+          "listeners": 1639666,
+          "similarity": 0.923,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "0f3dea69b1a0786e38be",
+      "name": "This Is The Day",
+      "artist": "The The",
+      "seed_listeners": 451517,
+      "cohort": "independent_quality",
+      "targets": [
+        "0459b1098ceb577b660d",
+        "07e303b65caa5ce9123f",
+        "8264b8647701ee62b79a",
+        "923e85f553c3fdbe5ae6",
+        "a6f6288606708c75c9b9",
+        "b1a3179bf3800bce5129",
+        "d6ebf7228ec9e0ed965e",
+        "e6ec8d2da318ae89246c"
+      ],
+      "recall": 0.0,
+      "mrr": 0.0,
+      "latency_ms": 4415.732,
+      "lastfm_calls": {
+        "artist.getSimilar": 3,
+        "artist.getTopTags": 15,
+        "track.getInfo": 3,
+        "track.getSimilar": 4,
+        "track.getTopTags": 3
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 427.157,
+        "artist.getTopTags": 1718.506,
+        "track.getInfo": 276.844,
+        "track.getSimilar": 668.238,
+        "track.getTopTags": 222.201
+      },
+      "unique_artists": 6,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "992fb59099960618329c",
+          "name": "And She Was",
+          "artist": "Talking Heads",
+          "listeners": 407308,
+          "similarity": 0.922,
+          "source": "ann"
+        },
+        {
+          "track_id": "03a6a0fb2caee2d27d50",
+          "name": "Uncertain Smile",
+          "artist": "The The",
+          "listeners": 204698,
+          "similarity": 0.907,
+          "source": "ann"
+        },
+        {
+          "track_id": "3efe1b4e6b37c4e2ea54",
+          "name": "Road to Nowhere",
+          "artist": "Talking Heads",
+          "listeners": 404498,
+          "similarity": 0.906,
+          "source": "ann"
+        },
+        {
+          "track_id": "d54e121304d2d985c1b7",
+          "name": "Stay Up Late",
+          "artist": "Talking Heads",
+          "listeners": 91995,
+          "similarity": 0.902,
+          "source": "ann"
+        },
+        {
+          "track_id": "6d2fbd5b45632f4d14a4",
+          "name": "Close to Me",
+          "artist": "The Cure",
+          "listeners": 1361627,
+          "similarity": 0.897,
+          "source": "ann"
+        },
+        {
+          "track_id": "eee526f86c88a4a0529f",
+          "name": "Inbetween Days",
+          "artist": "The Cure",
+          "listeners": 814333,
+          "similarity": 0.897,
+          "source": "ann"
+        },
+        {
+          "track_id": "746dcbc8fe48e66e9c5f",
+          "name": "The Killing Moon",
+          "artist": "Echo & the Bunnymen",
+          "listeners": 1119236,
+          "similarity": 0.896,
+          "source": "ann"
+        },
+        {
+          "track_id": "13e724e006490a96bf65",
+          "name": "Pretty in Pink",
+          "artist": "The Psychedelic Furs",
+          "listeners": 419724,
+          "similarity": 0.896,
+          "source": "ann"
+        },
+        {
+          "track_id": "26a8ce1a9dbb35df8c3c",
+          "name": "Love My Way",
+          "artist": "The Psychedelic Furs",
+          "listeners": 888931,
+          "similarity": 0.892,
+          "source": "ann"
+        },
+        {
+          "track_id": "d18d91f7959e8e04543a",
+          "name": "Making Plans for Nigel",
+          "artist": "XTC",
+          "listeners": 423399,
+          "similarity": 0.891,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "234e03f63c23b432b8a1",
+      "name": "Fergusons Red Army",
+      "artist": "Manchester United Boys",
+      "seed_listeners": 454,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 515.037,
+      "lastfm_calls": {
+        "track.getSimilar": 4
+      },
+      "lastfm_timing_ms": {
+        "track.getSimilar": 474.249
+      },
+      "unique_artists": 2,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "85d71b109aa4db9ea7f5",
+          "name": "Glory Glory Man United (feat. Jenny Bae)",
+          "artist": "Manchester United Boys",
+          "listeners": 3549,
+          "similarity": 0.999,
+          "source": "ann"
+        },
+        {
+          "track_id": "230b5d13f5cf8387d0fa",
+          "name": "Man United Never Die",
+          "artist": "Manchester United Boys",
+          "listeners": 530,
+          "similarity": 0.999,
+          "source": "ann"
+        },
+        {
+          "track_id": "415ffca243f83b20a954",
+          "name": "That's Why We're Champions",
+          "artist": "Manchester United Boys",
+          "listeners": 295,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "2b422d621e212355f6f5",
+          "name": "Stand Up for the Champions",
+          "artist": "Manchester United Boys",
+          "listeners": 300,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "51ec4105f10f25c65af8",
+          "name": "Glory Glory Man United Medley",
+          "artist": "Manchester United Boys",
+          "listeners": 1762,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "7d46635f8614a6c1750c",
+          "name": "Hello Hello We Are the Busby Boys",
+          "artist": "Manchester United Boys",
+          "listeners": 438,
+          "similarity": 0.997,
+          "source": "ann"
+        },
+        {
+          "track_id": "aa21b316e50b961cb786",
+          "name": "We Love United",
+          "artist": "Manchester United Boys",
+          "listeners": 770,
+          "similarity": 0.981,
+          "source": "ann"
+        },
+        {
+          "track_id": "afc75634bf638eb75ad9",
+          "name": "Viva Ronaldo",
+          "artist": "Manchester United Boys",
+          "listeners": 902,
+          "similarity": 0.965,
+          "source": "ann"
+        },
+        {
+          "track_id": "eb719675f3d9f523f1fa",
+          "name": "Sign for a Big Club",
+          "artist": "Manchester United Boys",
+          "listeners": 308,
+          "similarity": 0.961,
+          "source": "ann"
+        },
+        {
+          "track_id": "0c2e3f9e85ef9a295366",
+          "name": "There's only one United",
+          "artist": "Reds United",
+          "listeners": 15,
+          "similarity": 0.894,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "e3405393e6bbb551ab51",
+      "name": "Good Girl",
+      "artist": "Cloonee",
+      "seed_listeners": 3069,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 10470.074,
+      "lastfm_calls": {
+        "artist.getSimilar": 8,
+        "artist.getTopTags": 48,
+        "track.getInfo": 8,
+        "track.getSimilar": 4,
+        "track.getTopTags": 8
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1061.554,
+        "artist.getTopTags": 4847.933,
+        "track.getInfo": 906.882,
+        "track.getSimilar": 541.915,
+        "track.getTopTags": 711.272
+      },
+      "unique_artists": 7,
+      "selected_by_source": {
+        "ann": 5,
+        "recursive_expansion": 5
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "10e941a296b7489873c0",
+          "name": "Roll Play",
+          "artist": "PAWSA",
+          "listeners": 54759,
+          "similarity": 0.9801073614852621,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "8ac18309012866a63e25",
+          "name": "Baile De Fantome",
+          "artist": "Franky Rizardo",
+          "listeners": 13560,
+          "similarity": 0.9635216630162164,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "9cee46beb00be45367f1",
+          "name": "False Need",
+          "artist": "Mochakk",
+          "listeners": 34907,
+          "similarity": 0.9587266933282577,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "b16d06c53249cd199948",
+          "name": "Impressions (feat. Stevie Appleton)",
+          "artist": "The Martinez Brothers",
+          "listeners": 208,
+          "similarity": 0.945,
+          "source": "ann"
+        },
+        {
+          "track_id": "cc43b1382fa32ea84895",
+          "name": "The Cure",
+          "artist": "BLOND:ISH",
+          "listeners": 8723,
+          "similarity": 0.9406253523474618,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "c8bb0fe827ad0e0aabd1",
+          "name": "Landslide",
+          "artist": "Jamback",
+          "listeners": 364,
+          "similarity": 0.934,
+          "source": "ann"
+        },
+        {
+          "track_id": "cf00569fec8c8f6677ea",
+          "name": "My Paradise - Vintage Culture Remix",
+          "artist": "Jamie Jones",
+          "listeners": 30543,
+          "similarity": 0.933,
+          "source": "ann"
+        },
+        {
+          "track_id": "ff2b544e41093fe5b2c2",
+          "name": "My Paradise",
+          "artist": "Jamie Jones",
+          "listeners": 34247,
+          "similarity": 0.933,
+          "source": "ann"
+        },
+        {
+          "track_id": "361b391410af9c371cb4",
+          "name": "Lose My Mind",
+          "artist": "Jamie Jones",
+          "listeners": 122886,
+          "similarity": 0.933,
+          "source": "ann"
+        },
+        {
+          "track_id": "68f748ba418bf0009ad9",
+          "name": "La Musa (with Miluhska)",
+          "artist": "Jamie Jones",
+          "listeners": 13249,
+          "similarity": 0.9329781451395168,
+          "source": "recursive_expansion"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "de0873d40abb2a132c9b",
+      "name": "DOWN",
+      "artist": "d0llywood1",
+      "seed_listeners": 3359,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 2578.106,
+      "lastfm_calls": {
+        "artist.getSimilar": 1,
+        "artist.getTopTags": 6,
+        "track.getInfo": 1,
+        "track.getSimilar": 4,
+        "track.getTopTags": 1
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 766.424,
+        "artist.getTopTags": 646.954,
+        "track.getInfo": 68.912,
+        "track.getSimilar": 605.618,
+        "track.getTopTags": 84.352
+      },
+      "unique_artists": 5,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "1da226c8fdb261ce8b87",
+          "name": "chasing",
+          "artist": "emorave",
+          "listeners": 2615,
+          "similarity": 0.943,
+          "source": "ann"
+        },
+        {
+          "track_id": "7b48022060bd5e37eed3",
+          "name": "tear my wings off",
+          "artist": "blxty",
+          "listeners": 6176,
+          "similarity": 0.935,
+          "source": "ann"
+        },
+        {
+          "track_id": "3a0bd043010553a16ee9",
+          "name": "attention",
+          "artist": "KIRYANO",
+          "listeners": 1380,
+          "similarity": 0.931,
+          "source": "ann"
+        },
+        {
+          "track_id": "175dc240b83868cacd88",
+          "name": "closely",
+          "artist": "blxty",
+          "listeners": 4022,
+          "similarity": 0.93,
+          "source": "ann"
+        },
+        {
+          "track_id": "b36d8f3ca9e51917a63f",
+          "name": "ring",
+          "artist": "blxty",
+          "listeners": 2285,
+          "similarity": 0.926,
+          "source": "ann"
+        },
+        {
+          "track_id": "e2d6e4a25bab246a21ea",
+          "name": "missed the point",
+          "artist": "blxty",
+          "listeners": 2091,
+          "similarity": 0.924,
+          "source": "ann"
+        },
+        {
+          "track_id": "cca1da5792015045a486",
+          "name": "SOJU",
+          "artist": "Lucy Bedroque",
+          "listeners": 26471,
+          "similarity": 0.914,
+          "source": "ann"
+        },
+        {
+          "track_id": "600b3c5766a8d1169cc3",
+          "name": "Santa Ana",
+          "artist": "egobreak",
+          "listeners": 5730,
+          "similarity": 0.913,
+          "source": "ann"
+        },
+        {
+          "track_id": "01d30fac10dc493a2f1b",
+          "name": "one more",
+          "artist": "blxty",
+          "listeners": 2514,
+          "similarity": 0.911,
+          "source": "ann"
+        },
+        {
+          "track_id": "7c1442ead8d126590250",
+          "name": "dumb",
+          "artist": "blxty",
+          "listeners": 14704,
+          "similarity": 0.907,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "69c679b59ae9666e8bb0",
+      "name": "No One Lasts Forever featuring David Cronenberg",
+      "artist": "Charli xcx",
+      "seed_listeners": 15,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 4239.0,
+      "lastfm_calls": {
+        "artist.getSimilar": 2,
+        "artist.getTopTags": 12,
+        "track.getInfo": 2,
+        "track.getSimilar": 4,
+        "track.getTopTags": 2
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 456.577,
+        "artist.getTopTags": 1227.688,
+        "track.getInfo": 145.223,
+        "track.getSimilar": 1458.613,
+        "track.getTopTags": 159.192
+      },
+      "unique_artists": 3,
+      "selected_by_source": {
+        "ann": 8,
+        "recursive_expansion": 2
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "3b6580ad4c37ff494f79",
+          "name": "Card Declined",
+          "artist": "Charli xcx",
+          "listeners": 42,
+          "similarity": 1.0,
+          "source": "ann"
+        },
+        {
+          "track_id": "d1f463b33c4e9d6f5e11",
+          "name": "Joven y Salvaje (with Bb trickz)",
+          "artist": "benny blanco",
+          "listeners": 7803,
+          "similarity": 0.921,
+          "source": "ann"
+        },
+        {
+          "track_id": "8c708d6105997bb7e3b8",
+          "name": "I think about it all the time",
+          "artist": "Charli xcx",
+          "listeners": 682764,
+          "similarity": 0.8917071307981628,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "23cf070376db24ea76ba",
+          "name": "Broken Glass",
+          "artist": "Lorde",
+          "listeners": 324199,
+          "similarity": 0.842563510087821,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "e715d04fca47b55c9a9e",
+          "name": "Mean girls featuring julian casablancas",
+          "artist": "Charli xcx",
+          "listeners": 290410,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "48bf9afed189c9614f1e",
+          "name": "Silver Cross",
+          "artist": "Charli xcx",
+          "listeners": 214496,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "e7b94d533ce7f734c734",
+          "name": "Rewind featuring bladee",
+          "artist": "Charli xcx",
+          "listeners": 379824,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "a05b70ba4abedeaf7225",
+          "name": "Emotional",
+          "artist": "Charli xcx",
+          "listeners": 112987,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "c6560a6729a845f27c71",
+          "name": "Nuclear Seasons",
+          "artist": "Charli xcx",
+          "listeners": 259764,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "aa1b690613f7bf589f47",
+          "name": "Crash",
+          "artist": "Charli xcx",
+          "listeners": 392665,
+          "similarity": 0.447,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "c68876bf8609de46b655",
+      "name": "Makka",
+      "artist": "fakemink, Ecco2k & Mechatok",
+      "seed_listeners": 2674,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 4319.474,
+      "lastfm_calls": {
+        "artist.getSimilar": 3,
+        "artist.getTopTags": 16,
+        "track.getInfo": 3,
+        "track.getSimilar": 4,
+        "track.getTopTags": 3
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 444.326,
+        "artist.getTopTags": 1505.271,
+        "track.getInfo": 509.312,
+        "track.getSimilar": 557.461,
+        "track.getTopTags": 303.966
+      },
+      "unique_artists": 7,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "fc24532bc3d38eb770d9",
+          "name": "FEVER",
+          "artist": "BUCKSHOT & FAKEMINK",
+          "listeners": 4483,
+          "similarity": 0.833,
+          "source": "ann"
+        },
+        {
+          "track_id": "0f3cf67db76d61e59c25",
+          "name": "Prague",
+          "artist": "EsDeeKid",
+          "listeners": 240519,
+          "similarity": 0.821,
+          "source": "ann"
+        },
+        {
+          "track_id": "a228805232f33a6b65dc",
+          "name": "Cali Man",
+          "artist": "EsDeeKid & Rico Ace",
+          "listeners": 6071,
+          "similarity": 0.811,
+          "source": "ann"
+        },
+        {
+          "track_id": "04525c15e83a1ae3c361",
+          "name": "Tartan",
+          "artist": "EsDeeKid & Fimiguerrero",
+          "listeners": 3978,
+          "similarity": 0.807,
+          "source": "ann"
+        },
+        {
+          "track_id": "b17ede6f7583473acb26",
+          "name": "Phantom",
+          "artist": "EsDeeKid & Rico Ace",
+          "listeners": 7854,
+          "similarity": 0.806,
+          "source": "ann"
+        },
+        {
+          "track_id": "d3464d0f07e468204b01",
+          "name": "TL;DR",
+          "artist": "Bladee, Ecco2k & ThaiBoy Digital",
+          "listeners": 3819,
+          "similarity": 0.798,
+          "source": "ann"
+        },
+        {
+          "track_id": "005733a579247c8e4289",
+          "name": "my magic is strong",
+          "artist": "Bladee",
+          "listeners": 7752,
+          "similarity": 0.794,
+          "source": "ann"
+        },
+        {
+          "track_id": "23efc8f4e2201ec0d695",
+          "name": "Obedient (feat. Ecco2k)",
+          "artist": "Bladee",
+          "listeners": 12115,
+          "similarity": 0.794,
+          "source": "ann"
+        },
+        {
+          "track_id": "6c6c4315dcea14a92bf1",
+          "name": "SIDE BY SIDE (feat. Thaiboy Digital)",
+          "artist": "Bladee",
+          "listeners": 17785,
+          "similarity": 0.794,
+          "source": "ann"
+        },
+        {
+          "track_id": "6c856f7b08aafed8ada5",
+          "name": "XOXO",
+          "artist": "Feng",
+          "listeners": 169784,
+          "similarity": 0.791,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "de47a44fd22c112e8cab",
+      "name": "Turkish",
+      "artist": "Action Bronson, Meyhem Lauren",
+      "seed_listeners": 410,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 4597.679,
+      "lastfm_calls": {
+        "artist.getSimilar": 3,
+        "artist.getTopTags": 16,
+        "track.getInfo": 3,
+        "track.getSimilar": 4,
+        "track.getTopTags": 3
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 494.05,
+        "artist.getTopTags": 1376.325,
+        "track.getInfo": 671.973,
+        "track.getSimilar": 775.643,
+        "track.getTopTags": 241.806
+      },
+      "unique_artists": 2,
+      "selected_by_source": {
+        "ann": 6,
+        "recursive_expansion": 4
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "d60c76ee02ef3423f3a8",
+          "name": "City Boy Blues",
+          "artist": "Action Bronson",
+          "listeners": 47634,
+          "similarity": 0.9999809149766858,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "81b429a1c1e72ca28667",
+          "name": "Picasso's Ear",
+          "artist": "Action Bronson",
+          "listeners": 84585,
+          "similarity": 0.9999809149766858,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "dc90268e5c63fef4b9b0",
+          "name": "Freddie HotSpot",
+          "artist": "Griselda",
+          "listeners": 76843,
+          "similarity": 0.9758830850941939,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "d89c5cae19dba0f1ef73",
+          "name": "Irishman Freestyle",
+          "artist": "Action Bronson",
+          "listeners": 30203,
+          "similarity": 0.44721190625851726,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "01c98355929e2c975cf7",
+          "name": "Falconry (feat. Meyhem Lauren & Big Body Bes)",
+          "artist": "Action Bronson",
+          "listeners": 56741,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "620737092ba57bff0dfb",
+          "name": "White Bronco",
+          "artist": "Action Bronson",
+          "listeners": 56548,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "aea67a7d14364f08edf1",
+          "name": "TANK (Feat. Big Body Bes)",
+          "artist": "Action Bronson",
+          "listeners": 30637,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "a96ae277896497ccd251",
+          "name": "THUG LOVE STORY 2017 THE MUSICAL - interlude",
+          "artist": "Action Bronson",
+          "listeners": 27452,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "70b97e9508223d31e031",
+          "name": "The Rising (feat. Big Body Bes)",
+          "artist": "Action Bronson",
+          "listeners": 53544,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "38e9207c9bea88c42140",
+          "name": "Latin Grammys",
+          "artist": "Action Bronson",
+          "listeners": 93193,
+          "similarity": 0.447,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "013ecde039f408a29db6",
+      "name": "fool for luv",
+      "artist": "Yukan",
+      "seed_listeners": 4196,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 594.837,
+      "lastfm_calls": {
+        "track.getSimilar": 4
+      },
+      "lastfm_timing_ms": {
+        "track.getSimilar": 443.227
+      },
+      "unique_artists": 2,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "b082871c18ba0f050751",
+          "name": "bestfriend",
+          "artist": "Yukan",
+          "listeners": 3258,
+          "similarity": 0.963,
+          "source": "ann"
+        },
+        {
+          "track_id": "1cbee340a7c5868d97d1",
+          "name": "ahead of the game",
+          "artist": "Yukan",
+          "listeners": 7173,
+          "similarity": 0.957,
+          "source": "ann"
+        },
+        {
+          "track_id": "2d85645f89a29e60adc0",
+          "name": "she is the table",
+          "artist": "Yukan",
+          "listeners": 1378,
+          "similarity": 0.951,
+          "source": "ann"
+        },
+        {
+          "track_id": "71e5f0d85eab2c33f72b",
+          "name": "laces",
+          "artist": "Yukan",
+          "listeners": 1678,
+          "similarity": 0.945,
+          "source": "ann"
+        },
+        {
+          "track_id": "ec50919a16a493c136d6",
+          "name": "walter white",
+          "artist": "Yukan",
+          "listeners": 1690,
+          "similarity": 0.942,
+          "source": "ann"
+        },
+        {
+          "track_id": "01c4a5765aa67f00198e",
+          "name": "bye felicia",
+          "artist": "2muchmotion",
+          "listeners": 8348,
+          "similarity": 0.937,
+          "source": "ann"
+        },
+        {
+          "track_id": "43bcddb83f2175b7f9fc",
+          "name": "crocodile tears",
+          "artist": "Yukan",
+          "listeners": 7431,
+          "similarity": 0.935,
+          "source": "ann"
+        },
+        {
+          "track_id": "9dad19cf12a3e869699b",
+          "name": "Run It Freestyle",
+          "artist": "2muchmotion",
+          "listeners": 4735,
+          "similarity": 0.934,
+          "source": "ann"
+        },
+        {
+          "track_id": "dda2d99759d475faab1d",
+          "name": "\u00a3mo Bitches",
+          "artist": "2muchmotion",
+          "listeners": 7855,
+          "similarity": 0.932,
+          "source": "ann"
+        },
+        {
+          "track_id": "3b3050a19cd3046ebb66",
+          "name": "answer",
+          "artist": "Yukan",
+          "listeners": 10479,
+          "similarity": 0.931,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "68ddfedbed4f187c72ee",
+      "name": "Watching Myself",
+      "artist": "Statik Selektah",
+      "seed_listeners": 4548,
+      "cohort": "no_similar",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 7935.572,
+      "lastfm_calls": {
+        "artist.getSimilar": 5,
+        "artist.getTopTags": 28,
+        "track.getInfo": 5,
+        "track.getSimilar": 4,
+        "track.getTopTags": 5
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 556.103,
+        "artist.getTopTags": 3263.808,
+        "track.getInfo": 672.799,
+        "track.getSimilar": 915.243,
+        "track.getTopTags": 538.065
+      },
+      "unique_artists": 4,
+      "selected_by_source": {
+        "ann": 4,
+        "recursive_expansion": 6
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "b1a3c04e8ccfe555d29f",
+          "name": "Carry On",
+          "artist": "Statik Selektah",
+          "listeners": 33673,
+          "similarity": 0.9999197130136791,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "8ed68e4e98ad96b27ba0",
+          "name": "Only In America (feat. Party Supplies)",
+          "artist": "Action Bronson",
+          "listeners": 37957,
+          "similarity": 0.9952078420803674,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "4d585e2078010826f647",
+          "name": "Compliments 2 The Chef (Feat. Lauriana Mae)",
+          "artist": "Action Bronson",
+          "listeners": 37277,
+          "similarity": 0.9952078420803674,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "81b429a1c1e72ca28667",
+          "name": "Picasso's Ear",
+          "artist": "Action Bronson",
+          "listeners": 84585,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "d60c76ee02ef3423f3a8",
+          "name": "City Boy Blues",
+          "artist": "Action Bronson",
+          "listeners": 47634,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "84e0f8e8cd6a9d92775c",
+          "name": "The Hopeless Romantic (feat. Action Bronson)",
+          "artist": "The Alchemist",
+          "listeners": 127738,
+          "similarity": 0.9942599852911539,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "62fa57e70d6d6788b78a",
+          "name": "Brother Jedidiah",
+          "artist": "The Alchemist",
+          "listeners": 24594,
+          "similarity": 0.9942599852911539,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "dc90268e5c63fef4b9b0",
+          "name": "Freddie HotSpot",
+          "artist": "Griselda",
+          "listeners": 76843,
+          "similarity": 0.9572451299042967,
+          "source": "recursive_expansion"
+        },
+        {
+          "track_id": "b89775e0fc7b8d2504f7",
+          "name": "The Spark",
+          "artist": "Statik Selektah",
+          "listeners": 24984,
+          "similarity": 0.447,
+          "source": "ann"
+        },
+        {
+          "track_id": "941bc8878eca434c03c4",
+          "name": "Beautiful Life",
+          "artist": "Statik Selektah",
+          "listeners": 8002,
+          "similarity": 0.447,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "06c7fbc3af104f661b88",
+      "name": "Sonata No. 7, Op. 83: I. Allegro Inquieto",
+      "artist": "Vladimir Horowitz",
+      "seed_listeners": 1,
+      "cohort": "obscure_warm",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 20788.529,
+      "lastfm_calls": {
+        "artist.getSimilar": 17,
+        "artist.getTopTags": 102,
+        "track.getInfo": 17,
+        "track.getSimilar": 4,
+        "track.getTopTags": 17
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 1450.734,
+        "artist.getTopTags": 9331.498,
+        "track.getInfo": 1944.224,
+        "track.getSimilar": 552.387,
+        "track.getTopTags": 1460.361
+      },
+      "unique_artists": 1,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "9da382c0153d15c7c28f",
+          "name": "Piano Concerto No.1 In B Flat Minor, Op. 23: III. Allegro",
+          "artist": "Vladimir Horowitz",
+          "listeners": 1,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "d2bc5fdb5526c50b1113",
+          "name": "Mazurka N\u00b07 in F minor Opus 7 N\u00b03",
+          "artist": "Vladimir Horowitz",
+          "listeners": 2,
+          "similarity": 0.997,
+          "source": "ann"
+        },
+        {
+          "track_id": "f3b147ad524706bbf406",
+          "name": "Pastourelle - L'Eventail de Jeanne - N\u00b08",
+          "artist": "Vladimir Horowitz",
+          "listeners": 2,
+          "similarity": 0.997,
+          "source": "ann"
+        },
+        {
+          "track_id": "bea24b404beedaffe84e",
+          "name": "Etude in G-Flat",
+          "artist": "Vladimir Horowitz",
+          "listeners": 1,
+          "similarity": 0.996,
+          "source": "ann"
+        },
+        {
+          "track_id": "98d04b19e7c81437dcf9",
+          "name": "Piano Sonata No. 2 in B-Flat Major, Op. 35: IV. Finale. Presto. Sotto voce e legato (1962 Version)",
+          "artist": "Vladimir Horowitz",
+          "listeners": 2,
+          "similarity": 0.996,
+          "source": "ann"
+        },
+        {
+          "track_id": "798b40451a5f464004ca",
+          "name": "Piano Sonata No. 2 in B-Flat Major, Op. 35: III. Marche fun\u00e8bre. Lento (1962 Version)",
+          "artist": "Vladimir Horowitz",
+          "listeners": 2,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "60ef7a4b402943a59e87",
+          "name": "Piano Sonata No. 2 in B-Flat Major, Op. 35: II. Scherzo (1950 Version)",
+          "artist": "Vladimir Horowitz",
+          "listeners": 2,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "f8a9097cce210a2a8761",
+          "name": "Piano Concerto No.1 In B Flat Minor, Op. 23: II. Andante Simplice",
+          "artist": "Vladimir Horowitz",
+          "listeners": 1,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "ed291b6e3d65f31d82bc",
+          "name": "Piano Sonata No. 2 in B-Flat Major, Op. 35: I. Grave. Doppio movimento (1950 Version)",
+          "artist": "Vladimir Horowitz",
+          "listeners": 2,
+          "similarity": 0.992,
+          "source": "ann"
+        },
+        {
+          "track_id": "18af624b7ca5e610a1d2",
+          "name": "Sonata For Piano Op. 26: IV. Fuga",
+          "artist": "Vladimir Horowitz",
+          "listeners": 2,
+          "similarity": 0.989,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "16c2540cfa35f6ce926e",
+      "name": "Nobody (Instrumental)",
+      "artist": "Consequence",
+      "seed_listeners": 1,
+      "cohort": "obscure_warm",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 13017.247,
+      "lastfm_calls": {
+        "artist.getSimilar": 10,
+        "artist.getTopTags": 52,
+        "track.getInfo": 10,
+        "track.getSimilar": 4,
+        "track.getTopTags": 10
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 931.432,
+        "artist.getTopTags": 4967.222,
+        "track.getInfo": 1565.052,
+        "track.getSimilar": 745.576,
+        "track.getTopTags": 940.352
+      },
+      "unique_artists": 2,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "d1792b7330bd6de63923",
+          "name": "Patti Labelle (Skit)",
+          "artist": "Consequence",
+          "listeners": 1,
+          "similarity": 0.99,
+          "source": "ann"
+        },
+        {
+          "track_id": "624779367cc029096f00",
+          "name": "Niggaz Get Knocked ('99)",
+          "artist": "Consequence",
+          "listeners": 21,
+          "similarity": 0.988,
+          "source": "ann"
+        },
+        {
+          "track_id": "277dd5d234787a36cfc8",
+          "name": "Doctor , Doctor",
+          "artist": "Consequence",
+          "listeners": 214,
+          "similarity": 0.985,
+          "source": "ann"
+        },
+        {
+          "track_id": "4e229af61d3c3ad51fdc",
+          "name": "Man Purses",
+          "artist": "Consequence",
+          "listeners": 261,
+          "similarity": 0.984,
+          "source": "ann"
+        },
+        {
+          "track_id": "d6861a267d7b169a5878",
+          "name": "'03 Til Infinite",
+          "artist": "Consequence",
+          "listeners": 1,
+          "similarity": 0.983,
+          "source": "ann"
+        },
+        {
+          "track_id": "6d565e18f65a5a4ecf7e",
+          "name": "Shut You Down John",
+          "artist": "Capone",
+          "listeners": 1,
+          "similarity": 0.976,
+          "source": "ann"
+        },
+        {
+          "track_id": "bb03b12cefc596a38924",
+          "name": "choose your cliche",
+          "artist": "Capone",
+          "listeners": 2,
+          "similarity": 0.975,
+          "source": "ann"
+        },
+        {
+          "track_id": "bbc1e0016ac97f421192",
+          "name": "despite her face",
+          "artist": "Capone",
+          "listeners": 2,
+          "similarity": 0.975,
+          "source": "ann"
+        },
+        {
+          "track_id": "7441657ed9577c478d8c",
+          "name": "El Mero Chingon",
+          "artist": "Capone",
+          "listeners": 21,
+          "similarity": 0.974,
+          "source": "ann"
+        },
+        {
+          "track_id": "102cdc433441f6102b73",
+          "name": "if i had a tumor",
+          "artist": "Capone",
+          "listeners": 2,
+          "similarity": 0.972,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "d449d9ecfb282b6cd9bd",
+      "name": "Statistics (Original mix)",
+      "artist": "Etic",
+      "seed_listeners": 1,
+      "cohort": "obscure_warm",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 11198.613,
+      "lastfm_calls": {
+        "artist.getSimilar": 8,
+        "artist.getTopTags": 48,
+        "track.getInfo": 8,
+        "track.getSimilar": 4,
+        "track.getTopTags": 8
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 949.273,
+        "artist.getTopTags": 4440.492,
+        "track.getInfo": 945.374,
+        "track.getSimilar": 680.648,
+        "track.getTopTags": 987.268
+      },
+      "unique_artists": 2,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "0bf5d10ff60046815362",
+          "name": "I Dont Know (Live Version)",
+          "artist": "Sensifeel",
+          "listeners": 1,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "6ba59b2ce0e21440cbf4",
+          "name": "Plan B (Timeless Remix) (Remix)",
+          "artist": "Etic",
+          "listeners": 2,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "076cdb9ef100bc3f9e68",
+          "name": "Who's Going (Sensifeel Remix)",
+          "artist": "Sensifeel",
+          "listeners": 16,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "719715302a61529c277d",
+          "name": "Red Nose (Live Version)",
+          "artist": "Sensifeel",
+          "listeners": 2,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "e296337e0be3add5bd6c",
+          "name": "Plan B (Solaris Vibe Remix) (Remix)",
+          "artist": "Etic",
+          "listeners": 2,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "444ba40e513212f18e99",
+          "name": "Side-gain",
+          "artist": "Etic",
+          "listeners": 257,
+          "similarity": 0.997,
+          "source": "ann"
+        },
+        {
+          "track_id": "65daa0b840a1253f3aa1",
+          "name": "It's How You Say It",
+          "artist": "Etic",
+          "listeners": 54,
+          "similarity": 0.996,
+          "source": "ann"
+        },
+        {
+          "track_id": "b761a29e51c52033a290",
+          "name": "Flagada",
+          "artist": "Sensifeel",
+          "listeners": 82,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "5409f8dcbc9ed1c2cbfd",
+          "name": "French Tacos",
+          "artist": "Sensifeel",
+          "listeners": 19,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "eb6c84de001bffa9cd57",
+          "name": "Open Air",
+          "artist": "Sensifeel",
+          "listeners": 27,
+          "similarity": 0.995,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "f4d7258979c566f059b2",
+      "name": "black suede",
+      "artist": "Season",
+      "seed_listeners": 1,
+      "cohort": "obscure_warm",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 27136.109,
+      "lastfm_calls": {
+        "artist.getSimilar": 21,
+        "artist.getTopTags": 120,
+        "track.getInfo": 21,
+        "track.getSimilar": 4,
+        "track.getTopTags": 21
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 2012.789,
+        "artist.getTopTags": 11056.634,
+        "track.getInfo": 3004.403,
+        "track.getSimilar": 630.468,
+        "track.getTopTags": 1977.656
+      },
+      "unique_artists": 4,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "969a59e2e471b1baf27f",
+          "name": "Half the things in my mind",
+          "artist": "Season",
+          "listeners": 4,
+          "similarity": 0.991,
+          "source": "ann"
+        },
+        {
+          "track_id": "8931bf75dc47af5acec7",
+          "name": "Sure Sure",
+          "artist": "Season",
+          "listeners": 1,
+          "similarity": 0.99,
+          "source": "ann"
+        },
+        {
+          "track_id": "4b49f5fdb4d6698dc936",
+          "name": "& Over & Over (Kerrang! Session)",
+          "artist": "Season",
+          "listeners": 2,
+          "similarity": 0.988,
+          "source": "ann"
+        },
+        {
+          "track_id": "71618b4848c6961eff15",
+          "name": "You're Bringing Me Down",
+          "artist": "Season",
+          "listeners": 1,
+          "similarity": 0.987,
+          "source": "ann"
+        },
+        {
+          "track_id": "a67bd06db74e7f8e172e",
+          "name": "Throw Me to the Sky",
+          "artist": "Season",
+          "listeners": 302,
+          "similarity": 0.981,
+          "source": "ann"
+        },
+        {
+          "track_id": "e64ce6902464e6c5f082",
+          "name": "By Peggy's Well",
+          "artist": "Novak",
+          "listeners": 342,
+          "similarity": 0.953,
+          "source": "ann"
+        },
+        {
+          "track_id": "bca649c79a61de23f74c",
+          "name": "Fruit Cooler",
+          "artist": "Novak",
+          "listeners": 471,
+          "similarity": 0.952,
+          "source": "ann"
+        },
+        {
+          "track_id": "d227abf4de489110f00b",
+          "name": "Make It Now - Vocal Mix",
+          "artist": "Lorem Ipsum",
+          "listeners": 1100,
+          "similarity": 0.923,
+          "source": "ann"
+        },
+        {
+          "track_id": "ee0b8afca2d6e1e8f777",
+          "name": "Tate mcrae flip",
+          "artist": "Lorem Ipsum",
+          "listeners": 2486,
+          "similarity": 0.894,
+          "source": "ann"
+        },
+        {
+          "track_id": "1a2dfdc59a99d2c561ab",
+          "name": "Burning",
+          "artist": "Sacred holes",
+          "listeners": 2922,
+          "similarity": 0.867,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "c60f17a039e50bc6a5c6",
+      "name": "Show You Heaven (radio edit)",
+      "artist": "Judith",
+      "seed_listeners": 1,
+      "cohort": "obscure_warm",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 7856.73,
+      "lastfm_calls": {
+        "artist.getSimilar": 7,
+        "artist.getTopTags": 22,
+        "track.getInfo": 7,
+        "track.getSimilar": 4,
+        "track.getTopTags": 7
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 835.777,
+        "artist.getTopTags": 2245.913,
+        "track.getInfo": 862.231,
+        "track.getSimilar": 533.269,
+        "track.getTopTags": 1056.142
+      },
+      "unique_artists": 5,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "6a533009cc2192b19427",
+          "name": "Am Morgen eines neuen Tages",
+          "artist": "Judith",
+          "listeners": 1,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "190da29db0f0186c4f58",
+          "name": "Love And Pain (Karaoke Version)",
+          "artist": "Judith",
+          "listeners": 9,
+          "similarity": 0.996,
+          "source": "ann"
+        },
+        {
+          "track_id": "a721391497bcca930f73",
+          "name": "My Burning Fire",
+          "artist": "Judith",
+          "listeners": 38,
+          "similarity": 0.995,
+          "source": "ann"
+        },
+        {
+          "track_id": "2fa022b104054aa30739",
+          "name": "Keine Sonne",
+          "artist": "Staubkind",
+          "listeners": 5023,
+          "similarity": 0.954,
+          "source": "ann"
+        },
+        {
+          "track_id": "7358606125daaf792d5a",
+          "name": "Flagelation and Dancing",
+          "artist": "This Burning Effigy",
+          "listeners": 451,
+          "similarity": 0.941,
+          "source": "ann"
+        },
+        {
+          "track_id": "1d6383766bd9d1cfdcc0",
+          "name": "Blessed",
+          "artist": "Faith and the Muse",
+          "listeners": 6648,
+          "similarity": 0.934,
+          "source": "ann"
+        },
+        {
+          "track_id": "17fc5e75186eecece808",
+          "name": "The Tail of Two",
+          "artist": "Monica Richards",
+          "listeners": 639,
+          "similarity": 0.931,
+          "source": "ann"
+        },
+        {
+          "track_id": "fe5a1f2723ffa344bad4",
+          "name": "When We Were Dark",
+          "artist": "Faith and the Muse",
+          "listeners": 378,
+          "similarity": 0.871,
+          "source": "ann"
+        },
+        {
+          "track_id": "be45424a0424d764ab36",
+          "name": "NADA",
+          "artist": "Judith",
+          "listeners": 2180,
+          "similarity": 0.837,
+          "source": "ann"
+        },
+        {
+          "track_id": "b0e38ff866298a738c2e",
+          "name": "PrRrr",
+          "artist": "Judith",
+          "listeners": 1132,
+          "similarity": 0.834,
+          "source": "ann"
+        }
+      ]
+    },
+    {
+      "seed_track_id": "bb813d60d402208f61a9",
+      "name": "Afterwords (Jay Q mix)",
+      "artist": "endorphin",
+      "seed_listeners": 1,
+      "cohort": "obscure_warm",
+      "targets": [],
+      "recall": null,
+      "mrr": null,
+      "latency_ms": 33257.165,
+      "lastfm_calls": {
+        "artist.getSimilar": 25,
+        "artist.getTopTags": 137,
+        "track.getInfo": 25,
+        "track.getSimilar": 4,
+        "track.getTopTags": 25
+      },
+      "lastfm_timing_ms": {
+        "artist.getSimilar": 2875.124,
+        "artist.getTopTags": 13351.313,
+        "track.getInfo": 3901.65,
+        "track.getSimilar": 804.098,
+        "track.getTopTags": 2351.341
+      },
+      "unique_artists": 4,
+      "selected_by_source": {
+        "ann": 10
+      },
+      "fallback_attempted": false,
+      "candidates": [
+        {
+          "track_id": "8d019ff561d41aee6843",
+          "name": "WhiteBoyDay-endorphin",
+          "artist": "endorphin",
+          "listeners": 2,
+          "similarity": 0.999,
+          "source": "ann"
+        },
+        {
+          "track_id": "8f43b317acb9661fc956",
+          "name": "WeirdGirl-endorphin",
+          "artist": "endorphin",
+          "listeners": 2,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "4e49245b60550c285529",
+          "name": "In Regards to You",
+          "artist": "endorphin",
+          "listeners": 1,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "8cf2c64eafbdcc0f0f37",
+          "name": "Shukran",
+          "artist": "endorphin",
+          "listeners": 139,
+          "similarity": 0.998,
+          "source": "ann"
+        },
+        {
+          "track_id": "76f05050783122c585f6",
+          "name": "Relapse (radio edit)",
+          "artist": "endorphin",
+          "listeners": 10,
+          "similarity": 0.997,
+          "source": "ann"
+        },
+        {
+          "track_id": "646bc2d72aedbad6103a",
+          "name": "Portishead - Only You (Moth Equals Remix)",
+          "artist": "Moth Equals",
+          "listeners": 32,
+          "similarity": 0.983,
+          "source": "ann"
+        },
+        {
+          "track_id": "2c2ecefb68d64ff606a6",
+          "name": "I Hate Trance",
+          "artist": "Moth Equals",
+          "listeners": 5,
+          "similarity": 0.98,
+          "source": "ann"
+        },
+        {
+          "track_id": "f3893eb4ad3dd3eb250d",
+          "name": "Calle 0",
+          "artist": "Turbyo",
+          "listeners": 31,
+          "similarity": 0.978,
+          "source": "ann"
+        },
+        {
+          "track_id": "9d0b0f6f3d445196a6d3",
+          "name": "Invasion",
+          "artist": "UNKLE",
+          "listeners": 108849,
+          "similarity": 0.968,
+          "source": "ann"
+        },
+        {
+          "track_id": "8058b19fb0024a09e121",
+          "name": "In The Middle Of The Way Where The Paradigms Play",
+          "artist": "Moth Equals",
+          "listeners": 4,
+          "similarity": 0.956,
+          "source": "ann"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "baseline": "full",
+  "thresholds": {
+    "max_absolute_quality_loss": 0.02,
+    "max_absolute_cold_coverage_loss": 0.05
+  },
+  "recursive_expansion": {
+    "variant": "no_expansion",
+    "control_activity": {
+      "selected_candidates": 17
+    },
+    "recall_delta": 0.0,
+    "mrr_delta": 0.0,
+    "cold_any_coverage_delta": 0.0,
+    "lastfm_calls_delta": -794,
+    "mean_latency_ms_delta": -6727.727,
+    "eligible_for_removal": true
+  },
+  "artist_fallback": {
+    "variant": "no_artist_fallback",
+    "control_activity": {
+      "attempted_seeds": 0,
+      "selected_candidates": 0
+    },
+    "recall_delta": 0.0,
+    "mrr_delta": 0.0,
+    "cold_any_coverage_delta": 0.0,
+    "lastfm_calls_delta": 0,
+    "mean_latency_ms_delta": -2285.562,
+    "eligible_for_removal": true
+  },
+  "minimal": {
+    "variant": "minimal",
+    "control_activity": {
+      "attempted_seeds": 0,
+      "selected_candidates": 0
+    },
+    "recall_delta": 0.0,
+    "mrr_delta": 0.0,
+    "cold_any_coverage_delta": 0.0,
+    "lastfm_calls_delta": -794,
+    "mean_latency_ms_delta": -7132.023,
+    "eligible_for_removal": true
+  },
+  "listener_policy": {
+    "mode": "uncapped",
+    "legacy_cap": 500000,
+    "returned_above_legacy_cap": 45,
+    "max_returned_listeners": 2877445
+  }
+}

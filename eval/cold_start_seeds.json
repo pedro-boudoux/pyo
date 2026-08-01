@@ -1,0 +1,105 @@
+{
+  "source": "production_song_cache_plus_live_lastfm_verification",
+  "generated_at": "2026-08-01",
+  "description": "Bounded read-only production sample. no_similar seeds had zero track.getSimilar results when checked; obscure_warm controls returned at least one result.",
+  "seeds": [
+    {
+      "seed_track_id": "234e03f63c23b432b8a1",
+      "artist": "Manchester United Boys",
+      "name": "Fergusons Red Army",
+      "listeners": 454,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "e3405393e6bbb551ab51",
+      "artist": "Cloonee",
+      "name": "Good Girl",
+      "listeners": 3069,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "de0873d40abb2a132c9b",
+      "artist": "d0llywood1",
+      "name": "DOWN",
+      "listeners": 3359,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "69c679b59ae9666e8bb0",
+      "artist": "Charli xcx",
+      "name": "No One Lasts Forever featuring David Cronenberg",
+      "listeners": 15,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "c68876bf8609de46b655",
+      "artist": "fakemink, Ecco2k & Mechatok",
+      "name": "Makka",
+      "listeners": 2674,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "de47a44fd22c112e8cab",
+      "artist": "Action Bronson, Meyhem Lauren",
+      "name": "Turkish",
+      "listeners": 410,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "013ecde039f408a29db6",
+      "artist": "Yukan",
+      "name": "fool for luv",
+      "listeners": 4196,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "68ddfedbed4f187c72ee",
+      "artist": "Statik Selektah",
+      "name": "Watching Myself",
+      "listeners": 4548,
+      "cohort": "no_similar"
+    },
+    {
+      "seed_track_id": "06c7fbc3af104f661b88",
+      "artist": "Vladimir Horowitz",
+      "name": "Sonata No. 7, Op. 83: I. Allegro Inquieto",
+      "listeners": 1,
+      "cohort": "obscure_warm"
+    },
+    {
+      "seed_track_id": "16c2540cfa35f6ce926e",
+      "artist": "Consequence",
+      "name": "Nobody (Instrumental)",
+      "listeners": 1,
+      "cohort": "obscure_warm"
+    },
+    {
+      "seed_track_id": "d449d9ecfb282b6cd9bd",
+      "artist": "Etic",
+      "name": "Statistics (Original mix)",
+      "listeners": 1,
+      "cohort": "obscure_warm"
+    },
+    {
+      "seed_track_id": "f4d7258979c566f059b2",
+      "artist": "Season",
+      "name": "black suede",
+      "listeners": 1,
+      "cohort": "obscure_warm"
+    },
+    {
+      "seed_track_id": "c60f17a039e50bc6a5c6",
+      "artist": "Judith",
+      "name": "Show You Heaven (radio edit)",
+      "listeners": 1,
+      "cohort": "obscure_warm"
+    },
+    {
+      "seed_track_id": "bb813d60d402208f61a9",
+      "artist": "endorphin",
+      "name": "Afterwords (Jay Q mix)",
+      "listeners": 1,
+      "cohort": "obscure_warm"
+    }
+  ]
+}

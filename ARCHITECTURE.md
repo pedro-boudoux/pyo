@@ -20,8 +20,8 @@ Visual reference for how the Underground Music Discovery backend actually works
 >   remastered/…) of the same recording so duplicates don't flood recs (issue #11, diagram 3a).
 > - **Album covers** come from Deezer → iTunes → Deezer artist photo (`services/covers.py`).
 > - Extra machinery beyond the original plan: **blended tags**, **MMR re-ranking**,
->   **reject steering**, **linear & tree playlists**, **recursive seed expansion**,
->   and **dominant-tag aggregation** (`POST /graph/tags`, issue #2).
+>   **reject steering**, **linear & tree playlists**, and **dominant-tag
+>   aggregation** (`POST /graph/tags`, issue #2).
 > - **Embeddings are dense semantic vectors now (algorithm 2.0, Phase 1).** Each
 >   Last.fm tag is encoded with `all-MiniLM-L6-v2` (`fastembed`, ONNX/CPU) and a
 >   track's `vector(384)` is the count-weighted average of its tag vectors. This
@@ -254,9 +254,11 @@ flowchart LR
 
 ## 5. Seeding the graph (`POST /graph/seed`)
 
-The core loop. Builds the seed embedding (cache-aware), runs ANN search,
-bootstraps from Last.fm `getSimilar`, and recursively expands so the
-neighborhood is dense enough for playlists.
+The core loop. Builds the seed embedding (cache-aware), runs hybrid ANN search,
+and merges direct Last.fm `getSimilar` candidates. Issue #35 ablated recursive
+expansion and the graph-seeding similar-artist fallback; both are disabled after
+showing no quality or cold-seed coverage benefit on an identical production
+snapshot.
 
 ```mermaid
 flowchart TD
@@ -272,14 +274,8 @@ flowchart TD
     build --> node["UPSERT graph_nodes<br/>is_seed = true"]
 
     node --> ann["ann_search<br/>no listener cap, limit k"]
-    ann --> simseed["lastfm.get_similar_tracks(seed)<br/>limit 25"]
-
-    simseed --> expand["Recursive expansion<br/>top 3 candidates → getSimilar(10)<br/>embed+store those too"]
-
-    expand --> coldcheck{"pool still empty?<br/>(no track.getSimilar)"}
-    coldcheck -->|yes| fallback["Cold-start fallback:<br/>artist.getSimilar → artist.getTopTracks<br/>embed+store those"]
-    coldcheck -->|no| rank
-    fallback --> rank["merge ANN + getSimilar + expansion<br/>sort by similarity, keep top k"]
+    ann --> simseed["lastfm.get_similar_tracks(seed)<br/>limit 25 → embed+store"]
+    simseed --> rank["merge ANN + direct getSimilar<br/>sort by similarity, keep top k"]
     rank --> edges[("INSERT graph_edges<br/>seed → each candidate")]
     edges --> done(["{track_id, name, artist}"])
 ```

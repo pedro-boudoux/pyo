@@ -153,3 +153,48 @@ The deblinded result records both model IDs, versions, run IDs, per-model wins,
 capture parameters, ties, per-seed counts, ballot session metadata, and the
 referenced automated evaluation evidence. It explicitly marks human preference
 as supplemental and does not calculate a deployment pass from votes.
+
+## Cold-start ablation (issue #35)
+
+`cold_start_ablation` measures recursive seed expansion and the similar-artist
+top-track fallback independently. It reports independent-fixture recall/MRR,
+warm and no-similar seed coverage, every Last.fm method call, latency, selected
+graph degree/artist breadth, and the uncapped listener policy. The curated cold
+fixture is `cold_start_seeds.json`, built from a bounded read-only production
+sample and live `track.getSimilar` verification.
+
+Candidate ingestion writes song/tag cache rows. Never point this harness at
+production. Restore the same disposable production snapshot before each command;
+the comparison rejects mismatched snapshot fingerprints:
+
+```bash
+python -m eval.cold_start_ablation run \
+  --variant full --env-file /path/to/disposable.env \
+  --allow-db-writes --out eval/ablations/full.json
+python -m eval.cold_start_ablation run \
+  --variant no_expansion --env-file /path/to/disposable.env \
+  --allow-db-writes --out eval/ablations/no_expansion.json
+python -m eval.cold_start_ablation run \
+  --variant no_artist_fallback --env-file /path/to/disposable.env \
+  --allow-db-writes --out eval/ablations/no_artist_fallback.json
+python -m eval.cold_start_ablation run \
+  --variant minimal --env-file /path/to/disposable.env \
+  --allow-db-writes --out eval/ablations/minimal.json
+
+python -m eval.cold_start_ablation compare \
+  eval/ablations/full.json eval/ablations/no_expansion.json \
+  eval/ablations/no_artist_fallback.json eval/ablations/minimal.json \
+  --out eval/ablations/comparison.json
+```
+
+The default removal gate permits at most a 0.02 absolute recall/MRR loss and a
+0.05 absolute no-similar-seed coverage loss. A passing gate is evidence to
+review, not an automatic production code deletion.
+
+The committed `ablations/comparison.json` passed both gates on an identical
+production snapshot: every variant kept 100% coverage for eight verified
+no-similar seeds and six obscure warm controls, with unchanged independent
+recall/MRR. Recursive expansion added 794 Last.fm calls across 24 seeds and
+roughly 6.7 seconds to mean seed latency. The graph-seeding production defaults
+therefore disable both mechanisms. The recommendation exhaustion top-up is a
+separate path and retains its similar-artist fallback.
