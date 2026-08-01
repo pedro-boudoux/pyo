@@ -701,6 +701,32 @@ def _prune_candidate_vectors(retain: int = DEFAULT_CANDIDATE_RETENTION) -> None:
         )
 
 
+def _replace_active_vectors(cursor, run_id: int) -> int:
+    """Make active song vectors exactly match one immutable candidate snapshot."""
+    cursor.execute(
+        """UPDATE songs AS song
+           SET colisten_embedding = NULL, hybrid_embedding = NULL
+           WHERE (song.colisten_embedding IS NOT NULL
+                  OR song.hybrid_embedding IS NOT NULL)
+             AND NOT EXISTS (
+                 SELECT 1 FROM model_run_vectors AS candidate
+                 WHERE candidate.model_run_id = %s
+                   AND candidate.track_id = song.track_id
+             )""",
+        (run_id,),
+    )
+    cursor.execute(
+        """UPDATE songs AS song
+           SET colisten_embedding = candidate.colisten_embedding,
+               hybrid_embedding = candidate.hybrid_embedding
+           FROM model_run_vectors AS candidate
+           WHERE candidate.model_run_id = %s
+             AND candidate.track_id = song.track_id""",
+        (run_id,),
+    )
+    return cursor.rowcount
+
+
 def publish(run_id: int) -> dict:
     """Atomically replace active vectors with one validated candidate."""
     connection = get_connection()
@@ -745,16 +771,7 @@ def publish(run_id: int) -> dict:
         previous = cursor.fetchone()
         previous_id = int(previous["id"]) if previous else None
 
-        cursor.execute(
-            """UPDATE songs AS song
-               SET colisten_embedding = candidate.colisten_embedding,
-                   hybrid_embedding = candidate.hybrid_embedding
-               FROM model_run_vectors AS candidate
-               WHERE candidate.model_run_id = %s
-                 AND candidate.track_id = song.track_id""",
-            (run_id,),
-        )
-        updated = cursor.rowcount
+        updated = _replace_active_vectors(cursor, run_id)
         if updated != candidate_count:
             raise RuntimeError(
                 f"atomic publish updated {updated} songs, expected {candidate_count}"
@@ -847,16 +864,7 @@ def rollback(target_run_id: int | None = None) -> dict:
                 f"model run {target_run_id} has no retained candidate vectors"
             )
 
-        cursor.execute(
-            """UPDATE songs AS song
-               SET colisten_embedding = candidate.colisten_embedding,
-                   hybrid_embedding = candidate.hybrid_embedding
-               FROM model_run_vectors AS candidate
-               WHERE candidate.model_run_id = %s
-                 AND candidate.track_id = song.track_id""",
-            (target_run_id,),
-        )
-        updated = cursor.rowcount
+        updated = _replace_active_vectors(cursor, target_run_id)
         if updated != expected:
             raise RuntimeError(
                 f"rollback updated {updated} songs, expected {expected}"

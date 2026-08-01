@@ -29,7 +29,7 @@ class TransactionCursor:
             self._next = self.active
         elif "SELECT run.id FROM model_runs" in sql:
             self._next = None
-        elif "UPDATE songs AS song" in sql:
+        elif "UPDATE songs AS song" in sql and "FROM model_run_vectors" in sql:
             self.rowcount = self.updated
             self._next = None
         else:
@@ -83,7 +83,8 @@ def test_publish_updates_vectors_and_active_run_in_one_transaction(monkeypatch):
     assert connection.commits == 1
     assert connection.rollbacks == 0
     sql = "\n".join(statement for statement, _ in cursor.statements)
-    assert "UPDATE songs AS song" in sql
+    assert "SET colisten_embedding = NULL, hybrid_embedding = NULL" in sql
+    assert "FROM model_run_vectors AS candidate" in sql
     assert "status = 'superseded'" in sql
     assert "status = 'active'" in sql
 
@@ -142,6 +143,9 @@ def test_rollback_republishes_previous_candidate_atomically(monkeypatch):
     }
     assert connection.commits == 1
     assert connection.rollbacks == 0
+    sql = "\n".join(statement for statement, _ in cursor.statements)
+    assert "SET colisten_embedding = NULL, hybrid_embedding = NULL" in sql
+    assert "FROM model_run_vectors AS candidate" in sql
 
 
 def _validation_cursor_factory(run, statements):
