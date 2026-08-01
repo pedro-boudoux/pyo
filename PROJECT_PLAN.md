@@ -14,30 +14,30 @@ cutover. The completed rollout is recorded in
   rollback path.
 - The trainer has run successfully by hand, but no recurring Coolify job is
   configured.
-- GitHub issue #21, reducing country/language dominance in recommendations, is
-  the only open product issue at the time this plan was written.
+- Active roadmap implementation is tracked in GitHub issues #32–#40. The
+  country/language-weighting idea remains recorded in #21, closed as not planned.
 
 ## Execution order
 
 | Priority | Workstream | Depends on | Done when |
 |---|---|---|---|
-| P0 | Safe candidate training and atomic publication | Current trainer | A failed or interrupted run cannot alter the active model |
-| P0 | Coolify retraining schedule | Atomic publication | One scheduled run completes and is visible in `model_runs` |
-| P1 | Country/language tag attenuation (#21) | Evaluation fixture | Multilingual quality improves without overall regression |
-| P1 | Cold-start ablations and pruning | Stable hybrid baseline | Only machinery proven redundant is removed |
-| P1 | Parent-scoped rejection from graph removal | Current graph-removal flow | Removing a child changes later expansions from its parent |
-| P1 | Reject-steering evaluation | Parent-scoped rejection | Steering has a measured, bounded effect |
-| P2 | Blind human preference evaluation | Candidate quality changes | Results are reproducible and exportable |
-| P2 | Observability and runbook | Scheduled training | Model freshness and failures are obvious |
-| P3 | Legacy sparse-model removal | Hybrid soak + rollback confidence | Only truly unused 300-dim artifacts are removed safely |
+| P0 | [Safe candidate training (#32)](https://github.com/pedro-boudoux/pyo/issues/32) and [atomic publication (#33)](https://github.com/pedro-boudoux/pyo/issues/33) | Current trainer | A failed or interrupted run cannot alter the active model |
+| P0 | [Coolify retraining schedule (#34)](https://github.com/pedro-boudoux/pyo/issues/34) | Atomic publication | One scheduled run completes and is visible in `model_runs` |
+| Deferred | [Country/language tag attenuation (#21 — not planned)](https://github.com/pedro-boudoux/pyo/issues/21) | Revisit product decision | Multilingual quality improves without overall regression |
+| P1 | [Cold-start ablations and pruning (#35)](https://github.com/pedro-boudoux/pyo/issues/35) | Stable hybrid baseline | Only machinery proven redundant is removed |
+| P1 | [Parent-scoped rejection from graph removal (#36)](https://github.com/pedro-boudoux/pyo/issues/36) | Current graph-removal flow | Removing a child changes later expansions from its parent |
+| P1 | [Reject-steering evaluation (#37)](https://github.com/pedro-boudoux/pyo/issues/37) | Parent-scoped rejection | Steering has a measured, bounded effect |
+| P2 | [Blind human preference evaluation (#38)](https://github.com/pedro-boudoux/pyo/issues/38) | Candidate quality changes | Results are reproducible and exportable |
+| P2 | [Observability and runbook (#39)](https://github.com/pedro-boudoux/pyo/issues/39) | Scheduled training | Model freshness and failures are obvious |
+| P3 | [Legacy sparse-model removal (#40)](https://github.com/pedro-boudoux/pyo/issues/40) | Hybrid soak + rollback confidence | Only truly unused 300-dim artifacts are removed safely |
 
-P0 is sequential. The language-weighting, cold-start, and rejection-wiring P1
-workstreams can proceed in parallel after the production retraining path is safe;
-steering evaluation follows the rejection wiring.
+P0 is sequential. The cold-start and rejection-wiring P1 workstreams can proceed
+in parallel after the production retraining path is safe; steering evaluation
+follows the rejection wiring. Language weighting is deferred per issue #21.
 
 ## P0 — Safe recurring Phase 2 training
 
-### 1. Stage candidate vectors without touching production
+### 1. [Stage candidate vectors without touching production (#32)](https://github.com/pedro-boudoux/pyo/issues/32)
 
 The current trainer updates `songs.colisten_embedding` and
 `songs.hybrid_embedding` every batch. Replace that publication path with a
@@ -60,7 +60,7 @@ Acceptance criteria:
 - Duplicate or overlapping trainer invocations fail cleanly before doing work.
 - Every attempted run has an auditable terminal status.
 
-### 2. Validate and publish atomically
+### 2. [Validate and publish atomically (#33)](https://github.com/pedro-boudoux/pyo/issues/33)
 
 Before activation, validate candidate coverage, dimensions, finite values,
 normalization, tag-only fallbacks, the density gate, and a bounded independent
@@ -84,7 +84,7 @@ Acceptance criteria:
 - Unit/integration tests cover interruption, validation failure, publication,
   and rollback.
 
-### 3. Add the Coolify scheduled job
+### 3. [Add the Coolify scheduled job (#34)](https://github.com/pedro-boudoux/pyo/issues/34)
 
 Create a private Coolify worker/scheduled task from `Dockerfile.training`. It
 inherits the production `DATABASE_URL` and `COLISTEN_BETA`; it must have no public
@@ -105,7 +105,7 @@ Acceptance criteria:
 
 ## P1 — Recommendation quality
 
-### 4. Reduce country and language dominance (#21)
+### 4. [Deferred: reduce country and language dominance (#21)](https://github.com/pedro-boudoux/pyo/issues/21)
 
 Treat language/geography tags as context, not the main sonic signal:
 
@@ -128,7 +128,7 @@ Acceptance criteria:
 - The existing independent Stage B fixture has no material regression.
 - The selected factor and sweep output are committed and documented.
 
-### 5. Ablate cold-start machinery before pruning it
+### 5. [Ablate cold-start machinery before pruning it (#35)](https://github.com/pedro-boudoux/pyo/issues/35)
 
 Evaluate these mechanisms independently:
 
@@ -147,7 +147,7 @@ Acceptance criteria:
 - Listener-cap enforcement remains correct for returned recommendations.
 - The retained seeding flow has regression tests for warm and cold seeds.
 
-### 6. Connect graph removal to parent-scoped rejection
+### 6. [Connect graph removal to parent-scoped rejection (#36)](https://github.com/pedro-boudoux/pyo/issues/36)
 
 The current “Remove from graph” action only changes frontend state. It does not
 call `POST /feedback`, does not persist which parent produced the removed song,
@@ -188,7 +188,7 @@ Acceptance criteria:
 - API and frontend tests cover multiple incoming parents, request failure/retry,
   idempotency, and historical feedback compatibility.
 
-### 7. Re-evaluate reject steering
+### 7. [Re-evaluate reject steering (#37)](https://github.com/pedro-boudoux/pyo/issues/37)
 
 Keep this after the rejection wiring, embedding, and cold-start work so it is
 judged against the stable model:
@@ -210,7 +210,7 @@ Acceptance criteria:
 
 ## P2 — Evaluation and operations
 
-### 8. Add blind human preference testing
+### 8. [Add blind human preference testing (#38)](https://github.com/pedro-boudoux/pyo/issues/38)
 
 Build a small local evaluation page or CLI that shows anonymized A/B
 recommendation lists, randomizes sides, records ties, and exports JSON. Use it
@@ -223,7 +223,7 @@ Acceptance criteria:
 - Results include model versions and can be aggregated without knowing which
   side was the candidate during voting.
 
-### 9. Add model freshness observability and an operations runbook
+### 9. [Add model freshness observability and an operations runbook (#39)](https://github.com/pedro-boudoux/pyo/issues/39)
 
 - Expose or script a safe summary of the active run, age, graph snapshot,
   candidate coverage, fallback count, and last failure without leaking secrets.
@@ -240,7 +240,7 @@ Acceptance criteria:
   run fail?” without querying raw vectors.
 - A rollback drill succeeds from the written procedure.
 
-## P3 — Legacy cleanup after soak
+## [P3 — Legacy cleanup after soak (#40)](https://github.com/pedro-boudoux/pyo/issues/40)
 
 Do this only after the hybrid model has soaked through at least two successful
 scheduled runs and the rollback drill has passed.
@@ -265,8 +265,9 @@ Acceptance criteria:
 ## Definition of finished
 
 The project reaches the planned steady state when recurring training is atomic
-and observed in production, issue #21 is evaluated and resolved, cold-start and
-steering complexity are justified by measurements, operations are documented,
-and only the truly obsolete sparse 300-dimensional model has been removed. No
-task is complete solely because code exists; its acceptance criteria and the
-relevant production or offline gate must pass.
+and observed in production, cold-start and steering complexity are justified by
+measurements, operations are documented, and only the truly obsolete sparse
+300-dimensional model has been removed. Deferred issue #21 is outside this
+definition unless it is explicitly reopened. No task is complete solely because
+code exists; its acceptance criteria and the relevant production or offline gate
+must pass.
