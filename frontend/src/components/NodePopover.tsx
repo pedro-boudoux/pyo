@@ -481,27 +481,31 @@ export function NodePopover({
           <button
             disabled={loading}
             onClick={() => {
-              if (confirmingDelete) {
+              if (isLastSeed) {
+                // The last-seed case gets its own explicit confirm popover
+                // (rendered below) instead of the inline two-click pattern.
+                setConfirmingDelete(true);
+              } else if (confirmingDelete) {
                 setLeaving(true);
                 setTimeout(onDelete, EXIT_MS);
-              } else setConfirmingDelete(true);
+              } else {
+                setConfirmingDelete(true);
+              }
             }}
             className={[
               "w-full rounded-xl py-2 text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed",
-              confirmingDelete
+              confirmingDelete && !isLastSeed
                 ? "bg-red-500 text-white hover:bg-red-600"
                 : "border border-[#d0d0d0] text-red-500 hover:bg-red-50/60 hover:border-red-300",
             ].join(" ")}
           >
-            {confirmingDelete ? "Click again to remove" : "Remove from graph"}
+            {confirmingDelete && !isLastSeed ? "Click again to remove" : "Remove from graph"}
           </button>
-          {confirmingDelete && (
+          {confirmingDelete && !isLastSeed && (
             <div className="text-[10px] text-[#8a8a8a] mt-1.5 text-center leading-snug">
-              {isLastSeed
-                ? "This is your only source song. Removing it clears the whole graph and takes you back to the home screen."
-                : isSeed
-                  ? "Removes this seed and everything branching from it."
-                  : "Also removes any songs left disconnected from a seed."}
+              {isSeed
+                ? "Removes this seed and everything branching from it."
+                : "Also removes any songs left disconnected from a seed."}
             </div>
           )}
 
@@ -535,6 +539,39 @@ export function NodePopover({
           )}
         </div>
       </div>
+
+      {/* Last-seed confirm — deleting the only source song wipes the graph and
+          returns to the landing page, so it gets an explicit confirm popover
+          instead of the inline two-click pattern used for ordinary removals. */}
+      {confirmingDelete && isLastSeed && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 p-5 text-center bg-white/95 backdrop-blur-md rounded-[15px]">
+          <svg viewBox="0 0 24 24" className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden>
+            <path d="M12 9v4M12 17h.01" strokeLinecap="round" />
+            <path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div className="text-sm font-semibold text-[#1a1a1a]">Remove source song?</div>
+          <p className="text-xs text-[#8a8a8a] leading-snug">
+            This is your only source song. Removing it clears the entire graph and takes you back to the home screen.
+          </p>
+          <div className="flex gap-2 w-full mt-1">
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              className="flex-1 rounded-xl border border-[#d0d0d0] py-2 text-xs font-medium text-[#5a5a5a] hover:bg-[#f0f0f0] hover:border-[#a0a0a0] transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                setLeaving(true);
+                setTimeout(onDelete, EXIT_MS);
+              }}
+              className="flex-1 rounded-xl bg-red-500 py-2 text-xs font-medium text-white hover:bg-red-600 transition"
+            >
+              Back to home
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
