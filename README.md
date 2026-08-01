@@ -222,9 +222,9 @@ Recommendations then use both signals: what the song sounds like, and what peopl
 
 The trainer is not part of the web app. It is a separate program with its own dependencies and its own virtual environment, so the app stays small and fast. It is also picky about when it runs. It refuses to train until the web is big enough to learn from: at least 20,000 songs, with each song linked to about 8 others on average. Every successful run is recorded in the `model_runs` table.
 
-The first production training run has already happened. Retraining still needs a person to start it and watch it, because it updates the live vectors in batches and a bad run could hurt recommendations. It is not safe to put on a schedule yet. Making it fully automatic is one of the items in [`PROJECT_PLAN.md`](PROJECT_PLAN.md).
+The first production training run has already happened. Retraining still needs a person to start it and watch it, because it updates the live vectors in batches and a bad run could hurt recommendations. It is not safe to put on a schedule yet. Making it fully automatic is currently in the works.
 
-### The commands, for whoever maintains this
+### The Commands
 
 If you run the backend locally and want to retrain a fresh model:
 
@@ -235,13 +235,11 @@ make train-colisten COLISTEN_ARGS="--check-density --env-file path/to/runtime.en
 make train-colisten COLISTEN_ARGS="--env-file path/to/runtime.env --workers 8 --beta 2.0"
 ```
 
-Once retraining can run unattended, production should run it as a separate Coolify scheduled job built from `Dockerfile.training`. The job reads `DATABASE_URL` and `COLISTEN_BETA` from Coolify. Verify the database target before you enable the schedule. The training command is:
+Once retraining can run unattended, production should run it as a separate scheduled job built from `Dockerfile.training`. The job reads `DATABASE_URL` and `COLISTEN_BETA` from its environment. Verify the database target before you enable the schedule. The training command is:
 
 ```bash
 python -m jobs.train_colisten_embeddings --workers 4 --beta "$COLISTEN_BETA"
 ```
-
-The MacBook's `.env.prod` (git-ignored) points at the live database through a localhost SSH tunnel. The tunnel must be up before any crawl, training, or eval command uses that file. The database itself stays private. The earlier Neon crawl was merged into production before the switch, so those links were kept.
 
 ### How the model is checked
 
@@ -251,7 +249,7 @@ A model is only as good as its test, and this one is tested properly. It is judg
 make build-colisten-ground-truth
 ```
 
-The test set lives at `eval/ground_truth_colisten.json`, and the full results are in `eval/baselines/`. The tests chose `beta = 2.0` as the best balance between the sound signal and the co-listening signal. [`PHASE2_TODAY_PLAN.md`](PHASE2_TODAY_PLAN.md) records how the rollout went.
+The test set lives at `eval/ground_truth_colisten.json`, and the full results are in `eval/baselines/`. The tests chose `beta = 2.0` as the best balance between the sound signal and the co-listening signal. 
 
 ## What comes next
 

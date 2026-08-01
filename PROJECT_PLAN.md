@@ -25,13 +25,15 @@ cutover. The completed rollout is recorded in
 | P0 | Coolify retraining schedule | Atomic publication | One scheduled run completes and is visible in `model_runs` |
 | P1 | Country/language tag attenuation (#21) | Evaluation fixture | Multilingual quality improves without overall regression |
 | P1 | Cold-start ablations and pruning | Stable hybrid baseline | Only machinery proven redundant is removed |
-| P1 | Reject-steering evaluation | Stable hybrid baseline | Steering has a measured, bounded effect |
+| P1 | Parent-scoped rejection from graph removal | Current graph-removal flow | Removing a child changes later expansions from its parent |
+| P1 | Reject-steering evaluation | Parent-scoped rejection | Steering has a measured, bounded effect |
 | P2 | Blind human preference evaluation | Candidate quality changes | Results are reproducible and exportable |
 | P2 | Observability and runbook | Scheduled training | Model freshness and failures are obvious |
 | P3 | Legacy sparse-model removal | Hybrid soak + rollback confidence | Only truly unused 300-dim artifacts are removed safely |
 
-P0 is sequential. The three P1 workstreams can proceed in parallel after the
-production retraining path is safe.
+P0 is sequential. The language-weighting, cold-start, and rejection-wiring P1
+workstreams can proceed in parallel after the production retraining path is safe;
+steering evaluation follows the rejection wiring.
 
 ## P0 — Safe recurring Phase 2 training
 
@@ -145,10 +147,51 @@ Acceptance criteria:
 - Listener-cap enforcement remains correct for returned recommendations.
 - The retained seeding flow has regression tests for warm and cold seeds.
 
-### 6. Re-evaluate reject steering
+### 6. Connect graph removal to parent-scoped rejection
 
-Keep this after the embedding and cold-start work so it is judged against the
-stable model:
+The current “Remove from graph” action only changes frontend state. It does not
+call `POST /feedback`, does not persist which parent produced the removed song,
+and therefore does not affect later recommendations. Implement rejection as an
+explicit product behavior rather than inferring it from a globally rejected
+track ID:
+
+- Extend the feedback contract and storage with a nullable/explicit
+  `source_track_id` (the parent being expanded). Require it for new `reject`
+  actions while retaining a deliberate compatibility path for historical rows.
+- When a non-seed node is removed, submit one rejection for each visible incoming
+  parent before finalizing the local removal. If persistence fails, show an error
+  and keep or restore the node instead of silently losing the learning signal.
+- Do not interpret deleting a seed, pruning a disconnected descendant, blocking
+  an artist, or restarting the graph as a rejection. Only the song the user
+  deliberately removed receives feedback.
+- Scope steering queries to the stored `(source_track_id, rejected_track_id)`
+  relationship. A rejection from parent A must not steer parent B unless the user
+  also rejected that song from parent B.
+- Hard-exclude the exact rejected track from later expansions of that parent in
+  addition to steering away from its vector neighborhood, so it cannot
+  immediately reappear.
+- Apply the parent’s rejection state consistently to recommendation, linear, and
+  tree expansion modes. Define and test whether re-seeding an existing parent
+  should honor the same state rather than leaving `/graph/seed` accidentally
+  inconsistent.
+- Make duplicate reject submissions idempotent so repeated clicks/retries do not
+  multiply the steering force.
+
+Acceptance criteria:
+
+- Removing a child persists a parent-scoped rejection through the production API.
+- Re-expanding that parent does not return the exact removed track and uses the
+  steered query for every supported expansion mode.
+- Expanding an unrelated parent is unchanged.
+- Removing a seed, automatic orphan pruning, artist blocking, and restart create
+  no false rejection records.
+- API and frontend tests cover multiple incoming parents, request failure/retry,
+  idempotency, and historical feedback compatibility.
+
+### 7. Re-evaluate reject steering
+
+Keep this after the rejection wiring, embedding, and cold-start work so it is
+judged against the stable model:
 
 - Build repeatable rejection scenarios with one and multiple negatives.
 - Measure whether rejected songs and their close neighbors move down while the
@@ -167,7 +210,7 @@ Acceptance criteria:
 
 ## P2 — Evaluation and operations
 
-### 7. Add blind human preference testing
+### 8. Add blind human preference testing
 
 Build a small local evaluation page or CLI that shows anonymized A/B
 recommendation lists, randomizes sides, records ties, and exports JSON. Use it
@@ -180,7 +223,7 @@ Acceptance criteria:
 - Results include model versions and can be aggregated without knowing which
   side was the candidate during voting.
 
-### 8. Add model freshness observability and an operations runbook
+### 9. Add model freshness observability and an operations runbook
 
 - Expose or script a safe summary of the active run, age, graph snapshot,
   candidate coverage, fallback count, and last failure without leaking secrets.
