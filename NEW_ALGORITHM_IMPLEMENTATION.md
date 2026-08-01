@@ -1,5 +1,10 @@
 # Hybrid Embedding Refactor — Implementation Spec
 
+> **Status (July 31, 2026):** Phases 0–2 are implemented and the beta-2 hybrid
+> model is live in production. This file is the original work-order specification,
+> not the active status tracker. See `PHASE2_TODAY_PLAN.md` for the completed
+> rollout and `PROJECT_PLAN.md` for Phase 3 and later work.
+
 Instructions for coding agents implementing the new recommendation algorithm for the
 underground music discovery backend (FastAPI + pgvector, see `ARCHITECTURE.md`).
 

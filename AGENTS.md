@@ -30,9 +30,10 @@ ceiling is `listeners < 500_000` (`MAX_LISTENERS`).
 - Runtime secrets and deployment env live in Coolify, including `DATABASE_URL`,
   `LASTFM_API_KEY`, Spotify credentials, and `BLACKLIST_ARTISTS`. Treat all values
   as secrets; never paste full env values into chat or docs.
-- The database is selected by Coolify's `DATABASE_URL`; verify the current value
-  in Coolify before migrations, restores, or destructive DB work. It may still
-  point at Neon until a full DB migration is intentionally performed.
+- Production uses the private Coolify Postgres database selected by
+  `DATABASE_URL`. Verify the current secret value in Coolify before migrations,
+  restores, crawls, training, or destructive DB work; do not infer it from a
+  local env file.
 - Prefer Coolify-managed deploys/restarts/env changes. A direct `docker restart`
   on the homelab does not apply changed Coolify env vars.
 - If the `manage-coolify-homelab` skill is available, use it for Coolify work. If
@@ -197,13 +198,15 @@ yields an all-zero vector, which downstream code guards against. `tag_vocab.id` 
 no longer a vector slot — it's just the row PK; the meaningful column is
 `tag_vocab.embedding` (the cached per-tag MiniLM vector).
 
-> **Phase 2 (rollout-gated) — co-listening half.** Every `getSimilar` result is also
+> **Phase 2 (live) — co-listening half.** Every `getSimilar` result is also
 > persisted as a weighted edge in `colisten_edges` (see `services/colisten.py`), pure
 > append-only data collection with zero new Last.fm calls, so a dense co-listening
 > graph accumulates for weighted random-walk training. The 128-dim trainer,
-> `colisten_embedding`, and 512-dim `hybrid_embedding` are implemented; production
-> remains on the intact 384-dim Stage A column until the density gate and independent
-> beta sweep pass. `RECOMMENDATION_MODEL=hybrid` performs the config-only cutover.
+> `colisten_embedding`, and 512-dim `hybrid_embedding` are implemented. Production
+> serves `RECOMMENDATION_MODEL=hybrid` at the independently selected
+> `COLISTEN_BETA=2`; the intact 384-dim Stage A column remains the tag half and
+> config-only rollback. Scheduled retraining still requires candidate staging and
+> atomic publication; see `PROJECT_PLAN.md`.
 
 ### ANN search + diversity (recommendations)
 
@@ -609,7 +612,7 @@ TAG_EMBEDDING_DIM   = 384      # semantic tag half (all-MiniLM-L6-v2 output)
 LEGACY_EMBEDDING_DIM = 300     # old sparse vector, kept as embedding_legacy_300 for rollback
 COLISTEN_EMBEDDING_DIM = 128
 HYBRID_EMBEDDING_DIM = 512
-RECOMMENDATION_MODEL = "stage_a"  # set hybrid only after gated eval/backfill
+RECOMMENDATION_MODEL = "stage_a"  # safe code/local default; Coolify prod overrides to hybrid
 COLISTEN_BETA       = 2.0      # winner of the independent Stage B beta sweep
 TAG_ENCODER_MODEL   = "sentence-transformers/all-MiniLM-L6-v2"  # fastembed ONNX, CPU, no torch
 MMR_LAMBDA          = 0.7      # relevance vs diversity (1.0 = pure relevance)
@@ -712,10 +715,9 @@ The public API base is `https://pyo-backend.pedroboudoux.com`; verify deployment
 health with `curl -fsS https://pyo-backend.pedroboudoux.com/health`. Coolify may
 display the FQDN with `http://`; public browser traffic should use HTTPS.
 
-The database is whatever Postgres URL Coolify currently stores in `DATABASE_URL`
-for the app. Treat that value as secret and verify it in Coolify before migrations
-or restores. It may still be a Neon managed Postgres URL until a deliberate DB
-migration to a Coolify-managed database is completed.
+The app's `DATABASE_URL` points to the private Coolify Postgres database. Treat
+that value as secret and verify it in Coolify before migrations, restores,
+crawls, or training; never assume a local env file targets the same database.
 
 The **frontend** is built with Vite and published to **GitHub Pages** (live at
 `pedro-boudoux.github.io`). Its fallback API base is

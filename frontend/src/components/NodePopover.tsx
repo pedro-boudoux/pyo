@@ -418,18 +418,20 @@ export function NodePopover({
 
         {params.method === "recommendations" && (
           <SliderRow
-            label="Diversity (λ)"
-            value={params.lambda}
+            label="Diversity"
+            // Slider is inverted: right = more diverse. Backend still receives
+            // λ (relevance weight); we display 1 − λ so the knob feels intuitive.
+            value={1 - params.lambda}
             min={0}
             max={1}
             step={0.05}
-            suffix={params.lambda.toFixed(2)}
-            onChange={(v) => update("lambda", v)}
+            suffix={(1 - params.lambda).toFixed(2)}
+            onChange={(v) => update("lambda", 1 - v)}
             hint={
-              params.lambda > 0.7
-                ? "close to seed"
-                : params.lambda < 0.4
-                  ? "very diverse"
+              params.lambda < 0.4
+                ? "very diverse"
+                : params.lambda > 0.7
+                  ? "close to seed"
                   : "balanced"
             }
           />

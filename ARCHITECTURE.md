@@ -28,8 +28,10 @@ Visual reference for how the Underground Music Discovery backend actually works
 >   replaced the old sparse `vector(300)` slot model (kept per row as
 >   `embedding_legacy_300` for rollback). Phase 2 stores learned graph vectors in
 >   `colisten_embedding` and builds a separately indexed `hybrid_embedding`
->   (`vector(512)`). `RECOMMENDATION_MODEL` switches the read path, leaving Stage A
->   intact for instant rollback — see `NEW_ALGORITHM_IMPLEMENTATION.md`.
+>   (`vector(512)`). Production serves the hybrid path at `COLISTEN_BETA=2`;
+>   `RECOMMENDATION_MODEL` can switch back to intact Stage A for instant rollback.
+>   See `PHASE2_TODAY_PLAN.md` for the rollout record and `PROJECT_PLAN.md` for
+>   remaining work.
 
 ## Two shared building blocks
 

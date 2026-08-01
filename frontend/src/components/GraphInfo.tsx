@@ -213,7 +213,7 @@ export function GraphInfo({ nodeCount, avgListeners, trackIds, onRestart }: Prop
         <div className="flex items-stretch gap-4">
           <Stat label="Songs" value={nodeCount} />
           <div aria-hidden className="w-px self-stretch bg-[#656565]/15" />
-          <Stat label="Avg Listeners" value={formatListeners(avgListeners)} tip="Average Last.fm listener count across the songs on this graph. Lower means more underground." />
+          <Stat label="Avg Listeners" value={formatListeners(avgListeners)} tip="Average Last.fm listener count across the songs on this graph." />
         </div>
 
         {showTagSection && (

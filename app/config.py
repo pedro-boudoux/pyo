@@ -63,8 +63,9 @@ LEGACY_EMBEDDING_DIM = 300
 COLISTEN_EMBEDDING_DIM = 128
 HYBRID_EMBEDDING_DIM = TAG_EMBEDDING_DIM + COLISTEN_EMBEDDING_DIM
 
-# Phase 2 model selection. Stage A remains the safe default until the production
-# hybrid cutover. The independent Deezer-fixture sweep selected beta=2.0.
+# Phase 2 model selection. Stage A remains the safe code/local default and instant
+# rollback; Coolify production overrides this to hybrid. The independent
+# Deezer-fixture sweep selected beta=2.0.
 # Setting RECOMMENDATION_MODEL=hybrid switches ANN, MMR, steering and playlists to
 # songs.hybrid_embedding; the original songs.embedding vector(384) stays intact as
 # an instant rollback path.
