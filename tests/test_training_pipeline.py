@@ -73,7 +73,7 @@ def test_run_pipeline_stops_before_publish_on_failed_gate(monkeypatch):
         trainer.run_pipeline(training={}, validation={})
 
 
-def test_training_image_runs_complete_pipeline_by_default():
+def test_training_image_stays_alive_for_scheduled_execs():
     dockerfile = (REPO_ROOT / "Dockerfile.training").read_text()
-    assert '"jobs.train_colisten_embeddings", "run"' in dockerfile
+    assert 'CMD ["sleep", "infinity"]' in dockerfile
     assert "ENTRYPOINT" not in dockerfile
