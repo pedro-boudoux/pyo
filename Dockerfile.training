@@ -12,5 +12,4 @@ COPY app ./app
 COPY jobs ./jobs
 COPY eval/ground_truth_colisten.json ./eval/ground_truth_colisten.json
 
-ENTRYPOINT ["python", "-m", "jobs.train_colisten_embeddings"]
-CMD ["train", "--workers", "4"]
+CMD ["sleep", "infinity"]

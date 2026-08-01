@@ -238,15 +238,17 @@ make publish-colisten MODEL_RUN_ID=123
 make rollback-colisten
 ```
 
-The training image reads `DATABASE_URL` and `COLISTEN_BETA` from its environment. Verify the database target before starting it. This command stages a candidate only:
+The training image reads `DATABASE_URL` and `COLISTEN_BETA` from its environment. Verify the database target before starting it. The unattended command trains, validates, and atomically publishes under one advisory lock:
 
 ```bash
-python -m jobs.train_colisten_embeddings train --workers 4 --beta "$COLISTEN_BETA"
+python -m jobs.train_colisten_embeddings run --workers 4 --beta "$COLISTEN_BETA"
 ```
 
-It prints the candidate's `run_id`; pass that ID to `validate` and then
-`publish`. `rollback` without an ID republishes the active run's retained
+The individual `train`, `validate`, and `publish` commands remain available for
+manual inspection. `rollback` without an ID republishes the active run's retained
 predecessor. Candidate training and failed validation never alter live vectors.
+The private Coolify worker configuration and bounded-crawl policy are documented
+in [`ops/coolify-phase2-worker.md`](ops/coolify-phase2-worker.md).
 
 ### How the model is checked
 

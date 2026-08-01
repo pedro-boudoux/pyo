@@ -342,7 +342,7 @@ def _train_model(
     )
 
 
-def train(
+def _train_candidate(
     *,
     dimension: int = COLISTEN_EMBEDDING_DIM,
     walk_length: int = 40,
@@ -356,8 +356,9 @@ def train(
     allow_sparse: bool = False,
     dry_run: bool = False,
     model_out: str | None = None,
+    trigger: str = "manual",
 ) -> dict:
-    """Build a candidate run while leaving active recommendation rows intact."""
+    """Build a candidate while the caller holds the model-operation lock."""
     params = {
         "algorithm": MODEL_NAME,
         "dimension": dimension,
@@ -371,82 +372,83 @@ def train(
         "beta": beta,
         "batch_size": batch_size,
         "undirected_pair_weight": "max",
+        "trigger": trigger,
     }
 
+    _fail_abandoned_runs()
+    run_id = _create_run(params)
+    try:
+        snapshot = _graph_snapshot()
+        songs = _load_songs()
+        _record_snapshot(run_id, snapshot, len(songs))
+        gate = density_gate_status(
+            {key: snapshot[key] for key in ("nodes", "edges", "avg_degree")}
+        )
+        if not allow_sparse and not gate["ready"]:
+            raise RuntimeError(
+                "co-listening density gate not met: "
+                f"nodes={gate['nodes']} (need {COLISTEN_MIN_NODES}), "
+                f"avg_degree={gate['avg_degree']} "
+                f"(need {COLISTEN_MIN_AVG_DEGREE})"
+            )
+        if dimension != COLISTEN_EMBEDDING_DIM:
+            raise ValueError(
+                f"candidate dimension must be {COLISTEN_EMBEDDING_DIM}, "
+                f"got {dimension}"
+            )
+
+        adjacency = collapse_undirected_edges(_load_edges(snapshot["edge_cutoff"]))
+        model = _train_model(
+            adjacency,
+            dimension=dimension,
+            walk_length=walk_length,
+            walks_per_node=walks_per_node,
+            window=window,
+            workers=workers,
+            epochs=epochs,
+            seed=seed,
+        )
+        if model_out:
+            model.save(model_out)
+
+        staged = fallback = 0
+        status = "failed" if dry_run else "candidate"
+        failure = "dry run: no candidate vectors were stored" if dry_run else None
+        if not dry_run:
+            staged, fallback = _stage_song_vectors(
+                run_id,
+                model,
+                songs,
+                beta=beta,
+                batch_size=batch_size,
+            )
+        with get_cursor() as cursor:
+            cursor.execute(
+                """UPDATE model_runs
+                   SET status = %s, trained_at = now(), finished_at = now(),
+                       songs_updated = %s, fallback_count = %s,
+                       failure_details = %s
+                   WHERE id = %s""",
+                (status, staged, fallback, failure, run_id),
+            )
+        return {
+            **gate,
+            "run_id": run_id,
+            "status": status,
+            "songs_updated": staged,
+            "tag_only_fallbacks": fallback,
+            "params": params,
+        }
+    except BaseException as exc:
+        _mark_run_failed(run_id, exc)
+        raise
+
+
+def train(**kwargs) -> dict:
+    """Build a candidate while leaving active recommendation rows intact."""
     try:
         with model_lock():
-            _fail_abandoned_runs()
-            run_id = _create_run(params)
-            try:
-                snapshot = _graph_snapshot()
-                songs = _load_songs()
-                _record_snapshot(run_id, snapshot, len(songs))
-                gate = density_gate_status(
-                    {
-                        key: snapshot[key]
-                        for key in ("nodes", "edges", "avg_degree")
-                    }
-                )
-                if not allow_sparse and not gate["ready"]:
-                    raise RuntimeError(
-                        "co-listening density gate not met: "
-                        f"nodes={gate['nodes']} (need {COLISTEN_MIN_NODES}), "
-                        f"avg_degree={gate['avg_degree']} "
-                        f"(need {COLISTEN_MIN_AVG_DEGREE})"
-                    )
-                if dimension != COLISTEN_EMBEDDING_DIM:
-                    raise ValueError(
-                        f"candidate dimension must be {COLISTEN_EMBEDDING_DIM}, "
-                        f"got {dimension}"
-                    )
-
-                adjacency = collapse_undirected_edges(
-                    _load_edges(snapshot["edge_cutoff"])
-                )
-                model = _train_model(
-                    adjacency,
-                    dimension=dimension,
-                    walk_length=walk_length,
-                    walks_per_node=walks_per_node,
-                    window=window,
-                    workers=workers,
-                    epochs=epochs,
-                    seed=seed,
-                )
-                if model_out:
-                    model.save(model_out)
-
-                staged = fallback = 0
-                status = "failed" if dry_run else "candidate"
-                failure = "dry run: no candidate vectors were stored" if dry_run else None
-                if not dry_run:
-                    staged, fallback = _stage_song_vectors(
-                        run_id,
-                        model,
-                        songs,
-                        beta=beta,
-                        batch_size=batch_size,
-                    )
-                with get_cursor() as cursor:
-                    cursor.execute(
-                        """UPDATE model_runs
-                           SET status = %s, trained_at = now(), finished_at = now(),
-                               songs_updated = %s, fallback_count = %s,
-                               failure_details = %s
-                           WHERE id = %s""",
-                        (status, staged, fallback, failure, run_id),
-                    )
-                return {
-                    **gate,
-                    "run_id": run_id,
-                    "status": status,
-                    "songs_updated": staged,
-                    "tag_only_fallbacks": fallback,
-                    "params": params,
-                }
-            except BaseException as exc:
-                _mark_run_failed(run_id, exc)
-                raise
+            return _train_candidate(**kwargs)
     except TrainingLockUnavailable as exc:
         failed_run_id = _record_failed_attempt(str(exc))
         raise TrainingLockUnavailable(
@@ -727,18 +729,20 @@ def _replace_active_vectors(cursor, run_id: int) -> int:
     return cursor.rowcount
 
 
-def publish(run_id: int) -> dict:
+def publish(run_id: int, *, acquire_lock: bool = True) -> dict:
     """Atomically replace active vectors with one validated candidate."""
     connection = get_connection()
     cursor = connection.cursor()
     try:
-        cursor.execute(
-            "SELECT pg_try_advisory_xact_lock(%s) AS acquired", (MODEL_LOCK_KEY,)
-        )
-        if not cursor.fetchone()["acquired"]:
-            raise TrainingLockUnavailable(
-                "another Phase 2 model operation is already running"
+        if acquire_lock:
+            cursor.execute(
+                "SELECT pg_try_advisory_xact_lock(%s) AS acquired",
+                (MODEL_LOCK_KEY,),
             )
+            if not cursor.fetchone()["acquired"]:
+                raise TrainingLockUnavailable(
+                    "another Phase 2 model operation is already running"
+                )
         cursor.execute(
             "SELECT * FROM model_runs WHERE id = %s FOR UPDATE", (run_id,)
         )
@@ -804,6 +808,30 @@ def publish(run_id: int) -> dict:
         "songs_updated": updated,
         "previous_active_run_id": previous_id,
     }
+
+
+def run_pipeline(*, training: dict, validation: dict) -> dict:
+    """Hold one lock across train, validate, and atomic publication."""
+    try:
+        with model_lock():
+            candidate = _train_candidate(**training)
+            if candidate["status"] != "candidate":
+                raise RuntimeError(
+                    f"training did not create a publishable candidate: {candidate['status']}"
+                )
+            run_id = candidate["run_id"]
+            validation_result = validate(run_id, **validation)
+            publication = publish(run_id, acquire_lock=False)
+            return {
+                "candidate": candidate,
+                "validation": validation_result,
+                "publication": publication,
+            }
+    except TrainingLockUnavailable as exc:
+        failed_run_id = _record_failed_attempt(str(exc))
+        raise TrainingLockUnavailable(
+            f"{exc} (recorded as failed run {failed_run_id})"
+        ) from exc
 
 
 def rollback(target_run_id: int | None = None) -> dict:
@@ -908,6 +936,12 @@ def _add_training_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--allow-sparse", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--model-out", default=None)
+    parser.add_argument(
+        "--trigger",
+        choices=("manual", "scheduled"),
+        default="manual",
+        help="record how this model run was invoked",
+    )
 
 
 def _add_validation_arguments(parser: argparse.ArgumentParser) -> None:
@@ -932,6 +966,7 @@ def _training_kwargs(args) -> dict:
         "allow_sparse": args.allow_sparse,
         "dry_run": args.dry_run,
         "model_out": args.model_out,
+        "trigger": args.trigger,
     }
 
 
@@ -965,6 +1000,11 @@ def main() -> int:
         "rollback", help="atomically republish a retained successful run"
     )
     rollback_parser.add_argument("run_id", type=int, nargs="?", default=None)
+    run_parser = subparsers.add_parser(
+        "run", help="train, validate, and publish under one advisory lock"
+    )
+    _add_training_arguments(run_parser)
+    _add_validation_arguments(run_parser)
 
     args = parser.parse_args()
     if args.command == "check-density":
@@ -980,8 +1020,13 @@ def main() -> int:
         result = validate(args.run_id, **_validation_kwargs(args))
     elif args.command == "publish":
         result = publish(args.run_id)
-    else:
+    elif args.command == "rollback":
         result = rollback(args.run_id)
+    else:
+        result = run_pipeline(
+            training=_training_kwargs(args),
+            validation=_validation_kwargs(args),
+        )
     print(json.dumps(result, indent=2, default=str))
     return 0
 
