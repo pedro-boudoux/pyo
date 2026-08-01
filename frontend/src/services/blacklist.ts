@@ -1,15 +1,15 @@
-// Per-user artist blacklist, kept in localStorage. Layered ON TOP of the
-// server's mandatory blacklist (BLACKLIST_ARTISTS): these artists are sent to
-// /recommendations as `exclude_artists` so they're never recommended, and their
-// nodes are pulled from the graph the moment they're blocked.
+// Per-session artist blacklist. Layered ON TOP of the server's mandatory
+// blacklist (BLACKLIST_ARTISTS): these artists are sent to /recommendations as
+// `exclude_artists` so they're never recommended again from this point on.
+//
+// Intentionally in-memory only — a fresh page load starts with an empty list, so
+// a blocked artist doesn't follow the user across sessions.
 //
 // The matching here mirrors the backend (app/services/blacklist.py): case-
 // insensitive and credit-aware, so blocking "Drake" also matches "Drake, 21
-// Savage" and "X feat. Drake". It's used to filter nodes already on the graph.
+// Savage" and "X feat. Drake".
 
 import { useSyncExternalStore } from "react";
-
-const KEY = "pyo:blocked-artists";
 
 // Same separators as the backend's _ARTIST_SPLIT.
 const CREDIT_SPLIT =
@@ -28,29 +28,14 @@ function credits(artist: string): string[] {
     .filter(Boolean);
 }
 
-function readInitial(): string[] {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
 // In-memory source of truth (this module is the only writer), so snapshots are
-// referentially stable for useSyncExternalStore.
-let current: string[] = readInitial();
+// referentially stable for useSyncExternalStore. Starts empty on every page
+// load — blocked artists don't persist between sessions.
+let current: string[] = [];
 const listeners = new Set<() => void>();
 
 function set(next: string[]): string[] {
   current = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // ignore quota / privacy-mode errors — in-memory still works for the session
-  }
   listeners.forEach((l) => l());
   return next;
 }

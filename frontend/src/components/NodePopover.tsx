@@ -40,6 +40,9 @@ type Props = {
   artist?: string;
   trackId: string;
   isSeed: boolean;
+  /** True when this is the last remaining seed — deleting it clears the graph
+   *  and returns to the landing page, so the confirmation calls that out. */
+  isLastSeed?: boolean;
   /** Top tags delivered with the node's expansion response (issue #22). When
    *  present the popover shows them immediately; otherwise it falls back to a
    *  /features fetch (e.g. the seed node, which carries no tags). */
@@ -47,7 +50,7 @@ type Props = {
   loading: boolean;
   onExpand: (params: ExpansionParams) => void;
   onDelete: () => void;
-  /** Block this artist everywhere (recommendations + pull from graph). */
+  /** Block this artist from future recommendations (session-only). */
   onBlockArtist?: () => void;
   onClose: () => void;
   initial?: ExpansionParams;
@@ -63,6 +66,7 @@ export function NodePopover({
   artist,
   trackId,
   isSeed,
+  isLastSeed,
   tags: tagsProp,
   loading,
   onExpand,
@@ -493,9 +497,11 @@ export function NodePopover({
           </button>
           {confirmingDelete && (
             <div className="text-[10px] text-[#8a8a8a] mt-1.5 text-center leading-snug">
-              {isSeed
-                ? "Removes this seed and everything branching from it."
-                : "Also removes any songs left disconnected from a seed."}
+              {isLastSeed
+                ? "This is your only source song. Removing it clears the whole graph and takes you back to the home screen."
+                : isSeed
+                  ? "Removes this seed and everything branching from it."
+                  : "Also removes any songs left disconnected from a seed."}
             </div>
           )}
 
@@ -522,7 +528,7 @@ export function NodePopover({
               </button>
               {confirmingBlock && (
                 <div className="text-[10px] text-[#8a8a8a] mt-1.5 text-center leading-snug">
-                  Removes every song by {artist} and stops recommending them. Unblock in Graph Info.
+                  Stops recommending {artist} in future expansions. Songs already on the graph stay. Unblock in Graph Info.
                 </div>
               )}
             </div>

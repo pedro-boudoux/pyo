@@ -34,7 +34,8 @@ export type GraphViewProps = {
   notice: string | null;
   onDismissNotice: () => void;
   trackIds: string[];
-  edgeCount: number;
+  /** Average Last.fm listener count across the graph's non-seed nodes. */
+  avgListeners: number;
   graphRef: React.RefObject<GraphHandle | null>;
   onRestart: () => void;
 };
@@ -54,7 +55,7 @@ export function GraphView({
   notice,
   onDismissNotice,
   trackIds,
-  edgeCount,
+  avgListeners,
   graphRef,
   onRestart,
 }: GraphViewProps) {
@@ -102,7 +103,7 @@ export function GraphView({
 
       {/* Graph info / control — top-right. Restart lives inside the card body. */}
       <div className="absolute right-3 top-3 sm:right-5 sm:top-[29px] z-10">
-        <GraphInfo nodeCount={nodes.length} edgeCount={edgeCount} trackIds={trackIds} onRestart={onRestart} />
+        <GraphInfo nodeCount={nodes.length} avgListeners={avgListeners} trackIds={trackIds} onRestart={onRestart} />
       </div>
 
       {/* Search bar + seeding status + notices — bottom-center, stacked above

@@ -17,7 +17,7 @@ import { type SongNodeData } from "./components/SongNode";
 import { type GraphHandle } from "./components/Graph";
 import { expandFromTrack, getSongStatus, seedSong } from "./api";
 import { prefetchSpotifyLink } from "./services/spotifyCache";
-import { blockArtist, getBlockedArtists, isArtistBlocked } from "./services/blacklist";
+import { blockArtist, getBlockedArtists } from "./services/blacklist";
 import { useGraphSim } from "./hooks/useGraphSim";
 import { useIsMobile } from "./hooks/useIsMobile";
 import type { ExpansionParams, SongSearchResult } from "./types";
@@ -104,7 +104,7 @@ function withDisconnected(
   return removed;
 }
 
-type PopoverState = { nodeId: string; label: string; artist: string; isSeed: boolean; tags?: string[]; x: number; y: number };
+type PopoverState = { nodeId: string; label: string; artist: string; isSeed: boolean; isLastSeed: boolean; tags?: string[]; x: number; y: number };
 
 // Detect whether we're running inside the Spotify OAuth popup
 const spotifyCallbackCode = new URLSearchParams(window.location.search).get("code");
@@ -409,19 +409,15 @@ export default function App() {
     [removeNodeSet],
   );
 
-  // Block an artist (persists to the user's local blacklist) and immediately pull
-  // every node crediting them off the graph, along with anything left orphaned.
-  // The block is also sent to the backend on future expansions via excludeArtists.
+  // Block an artist for the rest of this session. The block is sent to the
+  // backend on future expansions via excludeArtists so the artist stops being
+  // recommended, but songs already on the graph stay where they are.
   const handleBlockArtist = useCallback(
     (artist: string) => {
       blockArtist(artist);
-      const matching = new Set(
-        nodes.filter((n) => isArtistBlocked(n.data.artist, [artist])).map((n) => n.id),
-      );
-      removeNodeSet(matching);
       setPopover(null);
     },
-    [nodes, removeNodeSet],
+    [],
   );
 
   // Restart (issue #13) — wipe every node/edge and return to the empty landing
@@ -441,18 +437,34 @@ export default function App() {
 
   const handleNodeClick: NodeMouseHandler = useCallback((event, node) => {
     const data = node.data as SongNodeData;
+    // Deleting the last remaining seed empties the graph (withDisconnected
+    // prunes every non-seed), which drops the user back to the landing page.
+    // Surface that as a stronger confirmation so it's not a silent reset.
+    const seedCount = nodes.filter((n) => n.data.isSeed).length;
     setPopover({
       nodeId: node.id,
       label: `${data.name} — ${data.artist}`,
       artist: data.artist,
       isSeed: data.isSeed,
+      isLastSeed: data.isSeed && seedCount <= 1,
       tags: data.tags,
       x: event.clientX,
       y: event.clientY,
     });
-  }, []);
+  }, [nodes]);
 
   const hasGraph = nodes.length > 0;
+
+  // Average Last.fm listener count across the graph's non-seed nodes (seeds
+  // don't carry a count). Shown in the Graph Info card as a vibe readout —
+  // "how underground is this corner of the map right now?"
+  const listenersValues = nodes
+    .map((n) => n.data.listeners)
+    .filter((l): l is number => typeof l === "number" && l > 0);
+  const avgListeners =
+    listenersValues.length > 0
+      ? Math.round(listenersValues.reduce((a, b) => a + b, 0) / listenersValues.length)
+      : 0;
 
   if (isSpotifyPopup) {
     return (
@@ -482,7 +494,7 @@ export default function App() {
             notice={notice}
             onDismissNotice={() => setNotice(null)}
             trackIds={nodes.map((n) => n.id)}
-            edgeCount={edges.length}
+            avgListeners={avgListeners}
             graphRef={graphRef}
             onRestart={handleRestart}
           />
@@ -510,6 +522,7 @@ export default function App() {
               artist={popover.artist}
               trackId={popover.nodeId}
               isSeed={popover.isSeed}
+              isLastSeed={popover.isLastSeed}
               tags={popover.tags}
               loading={loading}
               onExpand={handleExpand}
@@ -526,6 +539,7 @@ export default function App() {
             artist={popover.artist}
             trackId={popover.nodeId}
             isSeed={popover.isSeed}
+            isLastSeed={popover.isLastSeed}
             tags={popover.tags}
             loading={loading}
             onExpand={handleExpand}

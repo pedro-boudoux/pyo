@@ -11,7 +11,7 @@ type Tag = { tag: string; weight: number; count: number; share: number };
 
 type Props = {
   nodeCount: number;
-  edgeCount: number;
+  avgListeners: number;
   trackIds: string[];
   onRestart: () => void;
 };
@@ -100,7 +100,7 @@ function InfoTip({ text }: { text: string }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="font-display font-medium text-[#3f3f3f] text-xl leading-none tabular-nums">
@@ -113,7 +113,15 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-export function GraphInfo({ nodeCount, edgeCount, trackIds, onRestart }: Props) {
+// Compact 1-2 digit listener formatting — matches the per-node readout in
+// SongNode. Returns "12.3k", "1.2M", or the raw integer for small counts.
+function formatListeners(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
+}
+
+export function GraphInfo({ nodeCount, avgListeners, trackIds, onRestart }: Props) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
   const blocked = useBlockedArtists();
@@ -202,7 +210,7 @@ export function GraphInfo({ nodeCount, edgeCount, trackIds, onRestart }: Props) 
         <div className="flex items-stretch gap-4">
           <Stat label="Songs" value={nodeCount} />
           <div aria-hidden className="w-px self-stretch bg-[#656565]/15" />
-          <Stat label="Edges" value={edgeCount} />
+          <Stat label="Avg Listeners" value={formatListeners(avgListeners)} />
         </div>
 
         {showTagSection && (
