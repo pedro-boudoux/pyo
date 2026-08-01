@@ -26,7 +26,6 @@ def _parse_csv(raw: str) -> list[str]:
 BLACKLIST_ARTISTS = _parse_csv(os.getenv("BLACKLIST_ARTISTS", ""))
 
 STEERING_ALPHA = 0.3
-MAX_LISTENERS = 500000
 DEFAULT_K = 10
 
 # Rate limiting (slowapi). Per-client-IP limits guard the public deployment from

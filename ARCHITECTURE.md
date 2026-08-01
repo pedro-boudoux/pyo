@@ -272,12 +272,10 @@ flowchart TD
     reuse --> node
     build --> node["UPSERT graph_nodes<br/>is_seed = true"]
 
-    node --> ann["ann_search<br/>listeners < 500k, limit k"]
+    node --> ann["ann_search<br/>no listener cap, limit k"]
     ann --> simseed["lastfm.get_similar_tracks(seed)<br/>limit 25"]
 
-    simseed --> escalate["process_similar_tracks:<br/>embed+store each, score vs seed<br/>escalate listener caps<br/>500k → 1M → 2M → 10M<br/>until ≥1 added"]
-
-    escalate --> expand["Recursive expansion<br/>top 3 candidates → getSimilar(10)<br/>embed+store those too"]
+    simseed --> expand["Recursive expansion<br/>top 3 candidates → getSimilar(10)<br/>embed+store those too"]
 
     expand --> coldcheck{"pool still empty?<br/>(no track.getSimilar)"}
     coldcheck -->|yes| fallback["Cold-start fallback:<br/>artist.getSimilar → artist.getTopTracks<br/>embed+store those"]
@@ -325,7 +323,7 @@ flowchart TD
     zero -->|yes| empty["return [] (no usable tags)"]
     zero -->|no| steer["steering.apply_steering<br/>base − α·Σ(rejected)<br/>then normalize"]
 
-    steer --> pool["ann_search<br/>fetch k × 3 candidates<br/>listeners < 500k, exclude set"]
+    steer --> pool["ann_search<br/>fetch k × 3 candidates<br/>no listener cap, exclude set"]
     pool --> cap["per-artist cap (max 2)<br/>→ capped_pool + overflow"]
     cap --> mmr["mmr_rerank<br/>λ·relevance − (1−λ)·redundancy<br/>(λ = 0.7)"]
 
@@ -372,14 +370,14 @@ flowchart TD
 ## 8. Playlist generation (`POST /playlists/*`)
 
 Two strategies over the seed's graph neighborhood. `niche` mode walks listener
-thresholds (100 → 1k → 10k → 100k → 500k) to favor the most underground tracks.
+thresholds (100 → 1k → 10k → 100k → ∞) to favor the most underground tracks.
 
 ```mermaid
 flowchart TD
     subgraph linear["/playlists/linear"]
         L1["load seed embedding"] --> L2["get_neighborhood (direct edges)"]
         L2 --> L3["embed_missing<br/>(embed_and_store_track per null, diagram 3)"]
-        L3 --> L4["find_neighbors → ann_search<br/>niche → escalate thresholds<br/>sort by listeners asc"]
+        L3 --> L4["find_neighbors → ann_search<br/>niche → walk thresholds through ∞<br/>sort by listeners asc"]
         L4 --> L5(["flat track list"])
     end
 

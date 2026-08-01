@@ -130,9 +130,8 @@ Acceptance criteria:
 
 Evaluate these mechanisms independently:
 
-1. Listener-cap escalation (`500k → 1M → 2M → 10M`).
-2. Recursive expansion from the seed's top three candidates.
-3. Similar-artists' top-tracks fallback.
+1. Recursive expansion from the seed's top three candidates.
+2. Similar-artists' top-tracks fallback.
 
 Add temporary feature flags or an offline harness so every combination can be
 measured without risky production edits. Track recommendation coverage,

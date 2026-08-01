@@ -8,8 +8,8 @@ vector similarity search, and the graph expands based on user feedback. The user
 can also export branches of the graph as linear or tree-shaped playlists.
 
 "Underground" = low listener count from Last.fm (proxy for popularity, since
-Spotify's popularity/audio-feature APIs are deprecated). The default underground
-ceiling is `listeners < 500_000` (`MAX_LISTENERS`).
+Spotify's popularity/audio-feature APIs are deprecated). Listener counts are
+surfaced for ranking and playlist preferences, but do not impose a hard ceiling.
 
 > See `ARCHITECTURE.md` for Mermaid diagrams of every flow described below.
 
@@ -213,7 +213,7 @@ no longer a vector slot — it's just the row PK; the meaningful column is
 `GET /recommendations/{track_id}` does more than raw nearest-neighbor:
 
 1. **Steering** — `query = base − α·Σ(rejected neighbors)`, then normalized (`α = 0.3`).
-2. **Over-fetch** — pull `k × MMR_POOL_MULTIPLIER` (3×) candidates with `listeners < 500k`.
+2. **Over-fetch** — pull `k × MMR_POOL_MULTIPLIER` (3×) candidates without a listener cap.
 3. **Per-artist cap** — at most `MMR_MAX_PER_ARTIST` (2) per artist in the pool; the rest go to an overflow list.
 4. **MMR re-rank** — `score = λ·relevance − (1−λ)·redundancy` (`λ = 0.7`) for relevance/diversity balance.
 5. **Backfill** — if still short of `k`, refill from the capped-out overflow (most similar first).
@@ -236,8 +236,6 @@ query_vector = seed_embedding − α · Σ rejected_embeddings   # then L2-norma
 A fresh DB is sparse, so `POST /graph/seed` doesn't rely on ANN alone:
 
 - Pull the seed's `getSimilar` (limit 25), embed+store each, score against the seed.
-- If nothing lands under the underground cap, **escalate** the listener cap:
-  `500k → 1M → 2M → 10M` until at least one candidate is added.
 - Then **recursively expand**: take the top 3 candidates, pull *their* `getSimilar`
   (limit 10) and embed those too — this thickens the local neighborhood so BFS
   playlists don't drift into unrelated music once direct edges run out.
@@ -253,7 +251,7 @@ A fresh DB is sparse, so `POST /graph/seed` doesn't rely on ANN alone:
 Two strategies over a seed's graph neighborhood (`app/routers/playlists.py`):
 
 - **Linear** (`/playlists/linear`) — flat list of the seed's neighbors. `niche=true`
-  walks listener thresholds `100 → 1k → 10k → 100k → 500k`, collecting the most
+  walks listener thresholds `100 → 1k → 10k → 100k → ∞`, collecting the most
   underground matches first, then sorts ascending by listener count.
 - **Tree** (`/playlists/tree`) — BFS from the seed (`max_depth`, default 3),
   taking 2 neighbors per node and growing the allowed set with each visited
@@ -515,13 +513,13 @@ bootstrap + recursive expansion, writes edges. Returns `{ track_id, name, artist
 GET /recommendations/{track_id}?k=10&lambda=0.7&exclude=...
 ```
 Steering → ANN over-fetch → per-artist cap → MMR re-rank → overflow backfill →
-Last.fm top-up. Returns `k` neighbors with `listeners < 500k`.
+Last.fm top-up. Returns up to `k` neighbors without a listener ceiling.
 ```json
 { "recommendations": [{ "track_id": "xyz", "name": "...", "artist": "...", "similarity": 0.94, "listeners": 18200, "image": "..." }] }
 ```
 A cold seed (row exists but `embedding IS NULL`) is **embedded on demand** before
 ranking. An unknown `track_id` → **404**. An empty list means the seed genuinely
-has no underground neighbors locally or on Last.fm (or it has no usable tags at
+has no neighbors locally or on Last.fm (or it has no usable tags at
 all, yielding an all-zero vector, which is guarded against).
 
 ### Feedback
@@ -569,7 +567,7 @@ discover/
 │
 ├── app/
 │   ├── main.py               # FastAPI app, CORS, router registration, startup init_db()
-│   ├── config.py             # env vars + tunables (MAX_LISTENERS, MMR_*, STEERING_ALPHA, ...)
+│   ├── config.py             # env vars + tunables (MMR_*, STEERING_ALPHA, ...)
 │   ├── db.py                 # psycopg2 connection, pgvector register, init_db() + migrations
 │   ├── models.py             # pydantic request/response models
 │   │
@@ -605,7 +603,6 @@ discover/
 
 ```python
 STEERING_ALPHA      = 0.3      # reject steering strength
-MAX_LISTENERS       = 500000   # underground ceiling
 DEFAULT_K           = 10       # default neighbors per query
 EMBEDDING_DIM       = 384      # retained Stage A / instant rollback vector
 TAG_EMBEDDING_DIM   = 384      # semantic tag half (all-MiniLM-L6-v2 output)

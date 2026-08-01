@@ -4,11 +4,11 @@ from app.db import get_cursor
 from app.ratelimit import limiter
 from app.services import ingest, embeddings as emb_service, blacklist, hybrid
 from app.services.vector_utils import to_float_list
-from app.config import MAX_LISTENERS, RATE_LIMIT_HEAVY
+from app.config import RATE_LIMIT_HEAVY
 
 router = APIRouter(prefix="/playlists", tags=["playlists"])
 
-NICHE_THRESHOLDS = [100, 1_000, 10_000, 100_000, MAX_LISTENERS]
+NICHE_THRESHOLDS = [100, 1_000, 10_000, 100_000, float("inf")]
 
 
 def embed_missing(track_ids: set):

@@ -560,9 +560,8 @@ class TestRecommendationsRouter:
 
 
 class TestBuildRecommendations:
-    def test_local_ann_pool_enforces_underground_listener_ceiling(self, monkeypatch):
-        """The main ANN pool must honor the same ceiling as Last.fm top-up."""
-        from app.config import MAX_LISTENERS
+    def test_local_ann_pool_has_no_listener_cap(self, monkeypatch):
+        """The main ANN pool must not filter candidates by listener count."""
         from app.routers import recommendations as recs
 
         calls = iter([
@@ -593,7 +592,7 @@ class TestBuildRecommendations:
         result = recs.build_recommendations("seed", k=1, include_tags=False)
 
         assert len(result.recommendations) == 1
-        assert ann_search.call_args.kwargs["listeners_cap"] == MAX_LISTENERS
+        assert "listeners_cap" not in ann_search.call_args.kwargs
 
 
 # ---------------------------------------------------------------------------

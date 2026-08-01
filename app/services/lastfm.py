@@ -13,8 +13,9 @@ def _request(method: str, **params):
     return resp.json()
 
 
-"""
-    fetches listener count, playcount and a basic tag list for a specific track, the listener count is our underground filter. we want less than 500k listens to keep it niche or whatever
+"""Fetch listener count, playcount, and basic tags for a specific track.
+
+Listener counts are collected and surfaced, but are not used to filter tracks.
 """
 def get_track_info(artist: str, track: str) -> dict:
     data = _request("track.getInfo", artist=artist, track=track)

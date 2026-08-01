@@ -202,8 +202,8 @@ dissolves.
 
 **Gate:** Stage B shipped and beating the Phase 0 baseline on the independent ground truth.
 
-18. **Prune redundant cold-start machinery.** The escalating listener-cap recursion
-    (`500k → 1M → 2M → 10M`), recursive seed expansion, and cold-start fallbacks in
+18. **Prune redundant cold-start machinery.** The recursive seed expansion and
+    cold-start fallbacks in
     `POST /graph/seed` exist to compensate for sparse coverage. With co-listening
     embeddings, measure whether they still earn their complexity — likely the seeding flow
     can be simplified substantially. Remove only what the eval confirms is now redundant.

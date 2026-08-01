@@ -7,7 +7,6 @@ from app.services.embeddings import mmr_rerank
 from app.services.vector_utils import to_float_list
 from app.config import (
     DEFAULT_K,
-    MAX_LISTENERS,
     MMR_LAMBDA,
     MMR_POOL_MULTIPLIER,
     MMR_MAX_PER_ARTIST,
@@ -139,9 +138,8 @@ def build_recommendations(
         raise HTTPException(404, "Track not found — search for it first")
 
     if row["embedding"] is None:
-        # Cold seed: embed it on demand instead of bailing. Pass an effectively
-        # unbounded listener cap so the seed itself is never filtered out for
-        # being too popular — the underground cap only applies to candidates.
+        # Cold seed: embed it on demand instead of bailing. The seed embedding
+        # is unbounded because the seed itself must never be filtered out.
         song = ingest.embed_and_store_track(row["artist"], row["name"])
         base_embedding = song["embedding"] if song else None
     else:
@@ -172,7 +170,6 @@ def build_recommendations(
 
     pool = embeddings.ann_search(
         steered_embedding,
-        listeners_cap=MAX_LISTENERS,
         exclude_ids=exclude_ids,
         limit=k * MMR_POOL_MULTIPLIER,
     )

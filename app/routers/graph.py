@@ -100,9 +100,7 @@ def add_seed(request: Request, response: Response, body: SeedRequest):
         # already cached — skip all API calls
         vector = to_float_list(row["embedding"])
     else:
-        # first time seeing this song — run the shared embedding pipeline. An
-        # unbounded cap means the seed itself is never dropped for being too
-        # popular (the underground cap only applies to its candidates).
+        # first time seeing this song — run the shared embedding pipeline.
         song = ingest.embed_and_store_track(artist, name)
         if song is None:
             raise HTTPException(502, "Could not fetch track data from Last.fm")
