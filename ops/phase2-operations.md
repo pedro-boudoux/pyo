@@ -51,7 +51,7 @@ python -m jobs.train_colisten_embeddings validate RUN_ID
 python -m jobs.train_colisten_embeddings publish RUN_ID
 python -m jobs.train_colisten_embeddings rollback
 python -m jobs.train_colisten_embeddings rollback RUN_ID
-python -m jobs.train_colisten_embeddings run --workers 4
+python -m jobs.train_colisten_embeddings run --workers 4 --trigger scheduled
 ```
 
 `run` is the scheduled path and holds one PostgreSQL advisory lock across every
@@ -109,3 +109,36 @@ After publish or rollback:
 
 Any failure pauses further publication. Roll back before debugging candidate
 quality when the API or real recommendation smoke checks regress.
+
+## Retiring the sparse 300-dimensional column
+
+The issue #40 cleanup is intentionally absent from application startup. The
+operator command refuses to drop anything until `model_runs` proves that at
+least two validated runs invoked with `--trigger scheduled` were published and
+a round-trip rollback drill was completed. It touches only
+`songs.embedding_legacy_300`; Stage A's `songs.embedding` is never altered.
+
+Run each step in the API or worker image against the verified production
+database, inspecting the JSON after every command:
+
+```bash
+python -m jobs.remove_legacy_embedding status
+python -m jobs.remove_legacy_embedding backup
+python -m jobs.remove_legacy_embedding verify-backup
+python -m jobs.remove_legacy_embedding restore-drill
+python -m jobs.remove_legacy_embedding drop --confirm 'DROP embedding_legacy_300'
+```
+
+The backup is the durable table `songs_embedding_legacy_300_backup`.
+`restore-drill` exercises the real PostgreSQL drop, add-column, data-copy, and
+equality-check path, then rolls the whole transaction back so the production
+column never disappears. If a committed drop must be reversed later, run:
+
+```bash
+python -m jobs.remove_legacy_embedding restore
+python -m jobs.remove_legacy_embedding verify-backup
+```
+
+`backup` refuses to overwrite an existing copy, `drop` rechecks exact row/vector
+equality in the same transaction, and every failure rolls back. Keep the backup
+table through the post-migration observation window.

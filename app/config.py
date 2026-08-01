@@ -54,11 +54,8 @@ MAINTENANCE_API_KEY = os.getenv("MAINTENANCE_API_KEY")
 #   TAG_EMBEDDING_DIM    — the semantic tag half (all-MiniLM-L6-v2 output). Stays
 #                          384 across phases; it's the Phase-1 vector and the first
 #                          half of the Phase-2 hybrid.
-#   LEGACY_EMBEDDING_DIM — the old sparse slot vector, kept as `embedding_legacy_300`
-#                          for rollback until Phase 1 is signed off.
 EMBEDDING_DIM = 384
 TAG_EMBEDDING_DIM = 384
-LEGACY_EMBEDDING_DIM = 300
 COLISTEN_EMBEDDING_DIM = 128
 HYBRID_EMBEDDING_DIM = TAG_EMBEDDING_DIM + COLISTEN_EMBEDDING_DIM
 

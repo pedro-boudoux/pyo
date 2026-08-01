@@ -25,8 +25,8 @@ Visual reference for how the Underground Music Discovery backend actually works
 > - **Embeddings are dense semantic vectors now (algorithm 2.0, Phase 1).** Each
 >   Last.fm tag is encoded with `all-MiniLM-L6-v2` (`fastembed`, ONNX/CPU) and a
 >   track's `vector(384)` is the count-weighted average of its tag vectors. This
->   replaced the old sparse `vector(300)` slot model (kept per row as
->   `embedding_legacy_300` for rollback). Phase 2 stores learned graph vectors in
+>   replaced and retired the old sparse `vector(300)` slot model. Phase 2 stores
+>   learned graph vectors in
 >   `colisten_embedding` and builds a separately indexed `hybrid_embedding`
 >   (`vector(512)`). Production serves the hybrid path at `COLISTEN_BETA=2`;
 >   `RECOMMENDATION_MODEL` can switch back to intact Stage A for instant rollback.
@@ -122,7 +122,6 @@ erDiagram
         text artist
         int listeners "underground filter"
         vector embedding "vector(384) dense semantic tag vector (algo 2.0)"
-        vector embedding_legacy_300 "old sparse slot vector (rollback)"
         jsonb tags "raw blended {tag: count} (dominant_tags / features read this)"
         text image "cover URL"
         text canonical_key "sha1(artist|||canonical_title): folds variants, indexed (issue #11)"

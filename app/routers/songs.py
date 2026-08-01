@@ -182,69 +182,15 @@ def search_songs(
 
 
 """
-    Re-pack tag_vocab ids to be dense (1..N) and null all stale embeddings so
-    they get rebuilt on the next /reembed call. Idempotent: skips the repack
-    when max(id) == count(*) (ids are already dense). Run once after any DB
-    that was written by the old INSERT…ON CONFLICT DO UPDATE code that burned
-    SERIAL ids on conflicts, causing ids to race past EMBEDDING_DIM and silently
-    drop tags from every embedding.
-"""
-@router.post("/repack-vocab")
-@limiter.limit(RATE_LIMIT_MAINTENANCE)
-def repack_vocab(
-    request: Request,
-    response: Response,
-    _: None = Depends(require_maintenance_key),
-):
-    with get_cursor() as cursor:
-        cursor.execute("SELECT max(id) AS max_id, count(*) AS cnt FROM tag_vocab")
-        row = cursor.fetchone()
-    max_id = row["max_id"] or 0
-    count  = row["cnt"]    or 0
-
-    if max_id <= count:
-        return {"repacked": False, "tags": count, "nulled_embeddings": 0}
-
-    # Shift all ids up by 1_000_000 so new dense values (1..N) can't collide
-    # with any current value during the second UPDATE.
-    with get_cursor() as cursor:
-        cursor.execute("UPDATE tag_vocab SET id = id + 1000000")
-
-    with get_cursor() as cursor:
-        cursor.execute("""
-            UPDATE tag_vocab tv
-            SET id = r.new_id
-            FROM (
-                SELECT tag,
-                       (dense_rank() OVER (ORDER BY id - 1000000))::int AS new_id
-                FROM tag_vocab
-            ) r
-            WHERE r.tag = tv.tag
-        """)
-        cursor.execute(
-            "SELECT setval('tag_vocab_id_seq', (SELECT max(id) FROM tag_vocab))"
-        )
-
-    # All existing embeddings were built against the old id→slot mapping; null
-    # them so /reembed rebuilds every vector against the repacked vocab.
-    with get_cursor() as cursor:
-        cursor.execute("UPDATE songs SET embedding = NULL, hybrid_embedding = NULL")
-        cursor.execute("SELECT count(*) AS cnt FROM songs")
-        nulled = cursor.fetchone()["cnt"]
-
-    return {"repacked": True, "tags": count, "nulled_embeddings": nulled}
-
-
-"""
-    Re-embed up to `limit` songs whose embedding is NULL (e.g. after /repack-vocab).
+    Backfill up to `limit` songs whose semantic embedding is NULL.
     Each song re-fetches its tags from Last.fm and rebuilds the vector against the
     current tag_vocab. Call repeatedly with the same limit until `remaining` hits 0.
     Uses 2 parallel workers — Last.fm free tier allows ~5 req/s per key and each
     song makes ~7 sequential calls, so this stays comfortably within the limit.
 """
-@router.post("/reembed")
+@router.post("/backfill-semantic-embeddings")
 @limiter.limit(RATE_LIMIT_MAINTENANCE)
-def reembed_songs(
+def backfill_semantic_embeddings(
     request: Request,
     response: Response,
     limit: int = Query(default=50, ge=1, le=500),

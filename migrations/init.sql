@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS songs (
     listeners            INTEGER,
     image                TEXT,
     embedding            vector(384),
-    embedding_legacy_300 vector(300),
     colisten_embedding   vector(128),
     hybrid_embedding     vector(512),
     tags                 jsonb,
