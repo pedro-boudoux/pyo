@@ -152,7 +152,7 @@ value simply means "no folding" for that row (graceful), backfilled via
 1. User searches → `GET /songs/search` (local DB + Last.fm in parallel, covers from Deezer/iTunes)
 2. User drops a song on the graph → `POST /graph/seed`
 3. Backend builds the seed's tag embedding (cache-aware), runs ANN search, then
-   bootstraps + recursively expands the candidate pool from Last.fm `getSimilar`
+   merges direct Last.fm `getSimilar` candidates
 4. Candidates become graph nodes/edges
 5. User accepts or rejects nodes → `POST /feedback`
    - **Accept** → song is promoted to a seed and recommendations rerun from it
@@ -217,7 +217,7 @@ no longer a vector slot — it's just the row PK; the meaningful column is
 3. **Per-artist cap** — at most `MMR_MAX_PER_ARTIST` (2) per artist in the pool; the rest go to an overflow list.
 4. **MMR re-rank** — `score = λ·relevance − (1−λ)·redundancy` (`λ = 0.7`) for relevance/diversity balance.
 5. **Backfill** — if still short of `k`, refill from the capped-out overflow (most similar first).
-6. **Top-up** — if *still* short, fetch the seed's Last.fm `getSimilar`, embed+store, and score against the steered query. If the seed has no `getSimilar` at all, fall back to its **similar artists' top tracks** (same cold-start escape hatch as seeding).
+6. **Top-up** — if *still* short, fetch the seed's Last.fm `getSimilar`, embed+store, and score against the steered query. If that still cannot fill the request, fall back to the seed's **similar artists' top tracks**. This recommendation-exhaustion fallback is separate from graph seeding.
 
 ### Vector steering on reject
 
@@ -231,20 +231,23 @@ query_vector = seed_embedding − α · Σ rejected_embeddings   # then L2-norma
 `graph_edges` (only rejected *neighbors of that seed* steer it) — see
 `steering.get_rejected_embeddings`.
 
-### Seed bootstrapping & recursive expansion
+### Seed bootstrapping after the issue #35 ablation
 
-A fresh DB is sparse, so `POST /graph/seed` doesn't rely on ANN alone:
+A fresh DB is sparse, so `POST /graph/seed` still doesn't rely on ANN alone:
 
 - Pull the seed's `getSimilar` (limit 25), embed+store each, score against the seed.
-- Then **recursively expand**: take the top 3 candidates, pull *their* `getSimilar`
-  (limit 10) and embed those too — this thickens the local neighborhood so BFS
-  playlists don't drift into unrelated music once direct edges run out.
-- **Cold-start fallback**: if the pool is *still* empty (instrumental / soundtrack /
-  very obscure seeds often have no `track.getSimilar` at all), mine the seed's
-  **similar artists' top tracks** (`artist.getSimilar` → `artist.getTopTracks`) and
-  embed those instead. Without this such a seed yields an empty graph — nothing to
-  embed means `/recommendations` returns nothing and the UI shows a lone node.
-- Merge ANN + getSimilar + expansion, keep the top `DEFAULT_K` (10) by similarity, write edges.
+- Merge ANN + direct `getSimilar`, keep the top `DEFAULT_K` (10) by similarity,
+  and write edges.
+
+Issue #35 measured recursive expansion and the graph-seeding similar-artist
+fallback independently on identical production snapshots. All four combinations
+kept the same independent recall/MRR and 100% coverage for eight verified
+no-similar seeds plus six obscure warm controls. Recursive expansion added 794
+Last.fm calls across 24 seeds and about 6.7 seconds mean seed latency; the
+similar-artist fallback was never entered because hybrid ANN filled the cold
+seeds. Both are disabled by the production defaults in
+`services/seed_discovery.py`, while the ablation options and committed results
+remain reproducible. The separate recommendation exhaustion fallback is retained.
 
 ### Playlists
 
@@ -503,8 +506,8 @@ or no stored tags → `{ "tags": [] }`.
 POST /graph/seed
 body: { "track_id": "abc123" }
 ```
-Builds the embedding (cache-aware), promotes to seed node, runs ANN + getSimilar
-bootstrap + recursive expansion, writes edges. Returns `{ track_id, name, artist }`.
+Builds the embedding (cache-aware), promotes to seed node, merges ANN + direct
+getSimilar candidates, and writes edges. Returns `{ track_id, name, artist }`.
 **The track must already exist in `songs` (i.e. have been returned by search) — 404 otherwise.**
 
 ### Recommendations
@@ -573,7 +576,7 @@ discover/
 │   │
 │   ├── routers/
 │   │   ├── songs.py          # search, status, features, backfill-covers
-│   │   ├── graph.py          # GET /graph, POST /graph/seed (+ bootstrap/expansion)
+│   │   ├── graph.py          # GET /graph, POST /graph/seed
 │   │   ├── recommendations.py# ANN + steering + MMR + backfill + top-up
 │   │   ├── feedback.py       # accept/reject
 │   │   └── playlists.py      # linear + tree (BFS)
@@ -584,6 +587,7 @@ discover/
 │       ├── tag_encoder.py    # all-MiniLM-L6-v2 tag→384-dim encoder (fastembed), cached in tag_vocab.embedding
 │       ├── steering.py       # reject vector math
 │       ├── ingest.py         # embed_and_store_track — the one tag→vector pipeline, called everywhere
+│       ├── seed_discovery.py # measured ANN + direct getSimilar graph-seed candidate flow
 │       ├── colisten.py       # co-listening edge collection (Phase 2 data, append-only)
 │       ├── blacklist.py      # never-recommend artist filtering (BLACKLIST_ARTISTS + per-request)
 │       ├── spotify.py        # "listen on Spotify" link (client-credentials search)
