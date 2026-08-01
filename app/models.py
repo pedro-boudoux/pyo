@@ -51,6 +51,10 @@ class RecommendationsResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     track_id: str
     action: str
+    # Parent that produced this track. Required for new rejections so feedback
+    # steers only that parent's future expansions; optional for accepts and for
+    # compatibility with clients that only submit positive feedback.
+    source_track_id: Optional[str] = None
 
 
 class FeedbackResponse(BaseModel):

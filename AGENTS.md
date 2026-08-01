@@ -156,7 +156,8 @@ value simply means "no folding" for that row (graceful), backfilled via
 4. Candidates become graph nodes/edges
 5. User accepts or rejects nodes → `POST /feedback`
    - **Accept** → song is promoted to a seed and recommendations rerun from it
-   - **Reject** → stored as a negative; future queries from the parent seed steer away
+   - **Reject** → stored against an explicit parent; that parent's future queries
+     steer away and hard-exclude the exact removed track
 6. User exports a branch → `POST /playlists/linear` or `POST /playlists/tree`
 
 ### Embedding strategy (semantic blended tags — algorithm 2.0, Phase 1)
@@ -227,9 +228,11 @@ When a song is rejected, future ANN queries from its parent seed are nudged away
 query_vector = seed_embedding − α · Σ rejected_embeddings   # then L2-normalized
 ```
 
-`α` = `STEERING_ALPHA` = `0.3`. Rejections are scoped to a seed via
-`graph_edges` (only rejected *neighbors of that seed* steer it) — see
-`steering.get_rejected_embeddings`.
+`α` = `STEERING_ALPHA` = `0.3`. New rejections carry an explicit
+`feedback.source_track_id`, so a rejection from parent A cannot affect parent B.
+Historical rows keep `source_track_id = NULL` and deliberately fall back to the
+old `graph_edges` inference. Every expansion path (recommendations, linear, tree,
+and re-seeding) also hard-excludes the exact rejected track for that parent.
 
 ### Seed bootstrapping & recursive expansion
 
@@ -351,11 +354,14 @@ CREATE TABLE graph_edges (
 CREATE UNIQUE INDEX ON graph_edges(source_id, target_id);
 
 CREATE TABLE feedback (
-    id         SERIAL PRIMARY KEY,
-    track_id   TEXT REFERENCES songs(track_id),
-    action     TEXT CHECK (action IN ('accept', 'reject')),
-    created_at TIMESTAMPTZ DEFAULT now()
+    id              SERIAL PRIMARY KEY,
+    track_id        TEXT REFERENCES songs(track_id),
+    source_track_id TEXT REFERENCES songs(track_id), -- nullable for historical rows
+    action          TEXT CHECK (action IN ('accept', 'reject')),
+    created_at      TIMESTAMPTZ DEFAULT now()
 );
+CREATE UNIQUE INDEX ON feedback(source_track_id, track_id)
+WHERE action = 'reject' AND source_track_id IS NOT NULL;
 
 -- Co-listening graph (algorithm 2.0, Phase 2 data collection). Weighted edges
 -- harvested from every Last.fm getSimilar call (zero extra API calls). NO FK to
@@ -526,11 +532,14 @@ all, yielding an all-zero vector, which is guarded against).
 
 ```
 POST /feedback
-body: { "track_id": "xyz", "action": "accept" | "reject" }
+body: { "track_id": "xyz", "source_track_id": "abc", "action": "accept" | "reject" }
 ```
 - `accept` → promote to seed node, copy the parent edge, rerun ANN from the
-  accepted node (with its own steering) and write new edges.
-- `reject` → log it; it becomes a negative that steers future recs from the parent seed.
+  accepted node (with its own steering) and write new edges. `source_track_id` is
+  optional for accepts.
+- `reject` → requires `source_track_id`, is idempotent per parent/track pair,
+  removes that persisted edge, steers that parent away, and hard-excludes the
+  exact track from its later expansions.
 
 ### Playlists
 

@@ -15,9 +15,10 @@ import { NodePopover } from "./components/NodePopover";
 import { SeedingStatus } from "./components/SeedingStatus";
 import { type SongNodeData } from "./components/SongNode";
 import { type GraphHandle } from "./components/Graph";
-import { expandFromTrack, getSongStatus, seedSong } from "./api";
+import { expandFromTrack, getSongStatus, rejectTrack, seedSong } from "./api";
 import { prefetchSpotifyLink } from "./services/spotifyCache";
 import { blockArtist, getBlockedArtists } from "./services/blacklist";
+import { removeAfterPersistingRejections } from "./services/graphRemoval";
 import { useGraphSim } from "./hooks/useGraphSim";
 import { useIsMobile } from "./hooks/useIsMobile";
 import type { ExpansionParams, SongSearchResult } from "./types";
@@ -402,11 +403,37 @@ export default function App() {
   );
 
   const handleDeleteNode = useCallback(
-    (nodeId: string) => {
+    async (nodeId: string) => {
+      const node = nodes.find((candidate) => candidate.id === nodeId);
+
+      // Only a deliberate non-seed removal is negative feedback. Persist one
+      // rejection per visible incoming parent before changing local state; the
+      // orphan nodes pruned by removeNodeSet are intentionally not submitted.
+      if (node && !node.data.isSeed) {
+        setLoading(true);
+        setError(null);
+        try {
+          await removeAfterPersistingRejections(
+            nodeId,
+            edges,
+            rejectTrack,
+            () => removeNodeSet(new Set([nodeId])),
+            { isSeed: false, reason: "deliberate" },
+          );
+          setPopover(null);
+          return;
+        } catch {
+          setError("Couldn't save that removal. The song is still on your graph — try again.");
+          return;
+        } finally {
+          setLoading(false);
+        }
+      }
+
       removeNodeSet(new Set([nodeId]));
       setPopover(null);
     },
-    [removeNodeSet],
+    [nodes, edges, removeNodeSet],
   );
 
   // Block an artist for the rest of this session. The block is sent to the

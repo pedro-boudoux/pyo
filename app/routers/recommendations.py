@@ -152,7 +152,11 @@ def build_recommendations(
         return RecommendationsResponse(recommendations=[])
 
     steered_embedding = steering.apply_steering(base_embedding, track_id)
-    exclude_ids = list({track_id, *exclude})
+    rejected_ids = steering.get_rejected_track_ids(track_id)
+    # A rejection is both a directional signal and an exact parent-scoped ban.
+    # Caller exclusions are graph-local; persisted rejections survive removal,
+    # restart, and re-seeding of this same parent.
+    exclude_ids = list({track_id, *exclude, *rejected_ids})
     # Mandatory env blacklist ∪ this client's own blocked artists.
     blocked_artists = blacklist.normalize(exclude_artists)
 

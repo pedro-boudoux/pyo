@@ -104,6 +104,7 @@ def _pct(values: list[float], p: float) -> float:
 @dataclass
 class Ctx:
     seed_ids: list[str] = field(default_factory=list)   # existing graph nodes (for recs)
+    graph_edges: list[tuple[str, str]] = field(default_factory=list)
     search_hits: list[str] = field(default_factory=list)  # track_ids discovered via search
     allow_writes: bool = False
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -188,11 +189,16 @@ async def act_feedback(client, ctx, rec):
     """WRITE: accept/reject. Gated by allow_writes."""
     if not ctx.allow_writes:
         return
-    tid = ctx.a_seed()
-    if not tid:
-        return
+    if ctx.graph_edges and random.choice([True, False]):
+        source_id, tid = random.choice(ctx.graph_edges)
+        body = {"source_track_id": source_id, "track_id": tid, "action": "reject"}
+    else:
+        tid = ctx.a_seed()
+        if not tid:
+            return
+        body = {"track_id": tid, "action": "accept"}
     await _do(client, rec, "POST /feedback", "POST", "/feedback",
-              json={"track_id": tid, "action": random.choice(["accept", "reject"])})
+              json=body)
 
 
 async def act_playlist(client, ctx, rec):
@@ -264,8 +270,10 @@ async def bootstrap(client, ctx, rec):
     """Seed the id pool from the existing graph so read-only recs have targets."""
     r = await _do(client, rec, "GET /graph", "GET", "/graph")
     if r is not None and r.status_code == 200:
-        nodes = r.json().get("nodes", [])
+        graph = r.json()
+        nodes = graph.get("nodes", [])
         ctx.seed_ids = [n["track_id"] for n in nodes]
+        ctx.graph_edges = [(e["source"], e["target"]) for e in graph.get("edges", [])]
 
 
 async def run(args) -> int:
