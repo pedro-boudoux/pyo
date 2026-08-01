@@ -109,6 +109,10 @@ class WeightedWalks:
 def model_lock():
     """Hold one session-level advisory lock for the complete training attempt."""
     connection = get_connection()
+    # register_vector() introspects pgvector types and leaves psycopg2 inside a
+    # transaction. End that read-only setup transaction before enabling
+    # autocommit for a session-level advisory lock.
+    connection.rollback()
     connection.autocommit = True
     cursor = connection.cursor()
     acquired = False

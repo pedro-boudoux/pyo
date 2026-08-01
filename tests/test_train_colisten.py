@@ -149,6 +149,51 @@ def test_overlapping_invocation_fails_before_loading_training_data(monkeypatch):
     assert touched == []
 
 
+def test_model_lock_ends_pgvector_setup_transaction_before_autocommit(monkeypatch):
+    events = []
+
+    class Cursor:
+        def execute(self, sql, params=None):
+            events.append(sql)
+
+        def fetchone(self):
+            return {"acquired": True}
+
+        def close(self):
+            events.append("cursor-close")
+
+    class Connection:
+        def __init__(self):
+            self._autocommit = False
+
+        def rollback(self):
+            events.append("rollback")
+
+        @property
+        def autocommit(self):
+            return self._autocommit
+
+        @autocommit.setter
+        def autocommit(self, value):
+            events.append(f"autocommit-{value}")
+            self._autocommit = value
+
+        def cursor(self):
+            return Cursor()
+
+        def close(self):
+            events.append("connection-close")
+
+    monkeypatch.setattr(trainer, "get_connection", Connection)
+
+    with trainer.model_lock():
+        events.append("body")
+
+    assert events[0:2] == ["rollback", "autocommit-True"]
+    assert "SELECT pg_try_advisory_lock(%s) AS acquired" in events
+    assert "SELECT pg_advisory_unlock(%s)" in events
+
+
 def test_next_lock_holder_marks_hard_killed_runs_failed(monkeypatch):
     statements = []
 
