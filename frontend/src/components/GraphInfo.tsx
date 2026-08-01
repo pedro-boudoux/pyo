@@ -100,15 +100,18 @@ function InfoTip({ text }: { text: string }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Stat({ label, value, tip }: { label: string; value: string | number; tip?: string }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="font-display font-medium text-[#3f3f3f] text-xl leading-none tabular-nums">
         {value}
       </span>
-      <span className="font-medium text-[#909090] text-[10px] uppercase tracking-wider leading-none">
-        {label}
-      </span>
+      <div className="flex items-center gap-1">
+        <span className="font-medium text-[#909090] text-[10px] uppercase tracking-wider leading-none">
+          {label}
+        </span>
+        {tip && <InfoTip text={tip} />}
+      </div>
     </div>
   );
 }
@@ -210,7 +213,7 @@ export function GraphInfo({ nodeCount, avgListeners, trackIds, onRestart }: Prop
         <div className="flex items-stretch gap-4">
           <Stat label="Songs" value={nodeCount} />
           <div aria-hidden className="w-px self-stretch bg-[#656565]/15" />
-          <Stat label="Avg Listeners" value={formatListeners(avgListeners)} />
+          <Stat label="Avg Listeners" value={formatListeners(avgListeners)} tip="Average Last.fm listener count across the songs on this graph. Lower means more underground." />
         </div>
 
         {showTagSection && (
