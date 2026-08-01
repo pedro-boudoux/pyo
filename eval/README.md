@@ -51,3 +51,105 @@ python -m eval.sweep_beta \
 
 Metrics are recall@k, MRR, intra-list distance, median listeners, and fixture
 coverage. A run below the default 95% coverage gate fails.
+
+## Blind human preference sessions
+
+`eval.human_preference` compares two captured recommendation sets without showing
+the listener which model produced either side. It supports ties, saves after
+every answer, resumes partial ballots, combines multiple listeners, and exports
+JSON throughout. Use it to supplement the automated fixtures for beta, language
+weighting, cold-start, or steering changes. A human result is never a deployment
+gate by itself.
+
+Artifacts under `eval/human_runs/` are gitignored because the private key reveals
+model placement and vote metadata may identify evaluators.
+
+### 1. Capture each model
+
+Run the same seed fixture against each exact model state. `--model-version`
+should be an immutable code/config identifier; `--run-id` should be the database
+`model_runs.id` or an equally unique eval-run identifier. The automated fixture,
+result artifact, and status are required metadata.
+
+```bash
+.venv/bin/python -m eval.human_preference capture \
+  --env-file path/to/control.env \
+  --seeds eval/ground_truth_colisten.json \
+  --model-id hybrid \
+  --model-version git:abc123-beta:1 \
+  --run-id model-run:41 \
+  --metadata experiment=beta \
+  --automated-fixture eval/ground_truth_colisten.json \
+  --automated-result eval/baselines/control.json \
+  --automated-status passed \
+  --out eval/human_runs/control.json
+
+.venv/bin/python -m eval.human_preference capture \
+  --env-file path/to/candidate.env \
+  --seeds eval/ground_truth_colisten.json \
+  --model-id hybrid \
+  --model-version git:def456-beta:2 \
+  --run-id model-run:42 \
+  --metadata experiment=beta \
+  --automated-fixture eval/ground_truth_colisten.json \
+  --automated-result eval/baselines/candidate.json \
+  --automated-status passed \
+  --out eval/human_runs/candidate.json
+```
+
+Capture is read-only by default: Last.fm top-up is disabled, and a cold seed
+fails instead of being embedded. `--with-topup` opts into both behaviors and
+must only target local/staging data where writes are intentional.
+
+### 2. Prepare and vote
+
+`prepare` canonicalizes the model order and uses a SHA-256-seeded balanced
+randomization. The same captures, study ID, and randomization seed reproduce the
+same session ID, pair IDs, lists, and placement key even if `--model-a` and
+`--model-b` are swapped. Each capture also records `k`, MMR lambda, read-only
+mode, and a digest of the seed set.
+
+```bash
+.venv/bin/python -m eval.human_preference prepare \
+  --model-a eval/human_runs/control.json \
+  --model-b eval/human_runs/candidate.json \
+  --study-id beta-1-v-2 \
+  --randomization-seed beta-study-2026-08 \
+  --session-out eval/human_runs/beta.session.json \
+  --key-out eval/human_runs/beta.private-key.json
+
+.venv/bin/python -m eval.human_preference vote \
+  --session eval/human_runs/beta.session.json \
+  --evaluator-id listener-01 \
+  --metadata headphones=wired \
+  --metadata room=quiet \
+  --out eval/human_runs/listener-01.votes.json
+```
+
+Give evaluators only the session file. Keep `beta.private-key.json` away from
+them until voting is closed; it contains the model/run/version mapping and the
+randomization seed. The blind session and vote files contain no model identity.
+
+### 3. Aggregate, then deblind
+
+Omit `--key` to inspect completion, ties, and per-seed anonymous A/B counts while
+the study remains blind. Add the key only after voting closes to attribute wins
+to the captured model versions.
+
+```bash
+.venv/bin/python -m eval.human_preference aggregate \
+  --session eval/human_runs/beta.session.json \
+  --votes eval/human_runs/*.votes.json \
+  --out eval/human_runs/beta.blind-results.json
+
+.venv/bin/python -m eval.human_preference aggregate \
+  --session eval/human_runs/beta.session.json \
+  --votes eval/human_runs/*.votes.json \
+  --key eval/human_runs/beta.private-key.json \
+  --out eval/human_runs/beta.results.json
+```
+
+The deblinded result records both model IDs, versions, run IDs, per-model wins,
+capture parameters, ties, per-seed counts, ballot session metadata, and the
+referenced automated evaluation evidence. It explicitly marks human preference
+as supplemental and does not calculate a deployment pass from votes.

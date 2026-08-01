@@ -9,6 +9,7 @@ venv/
 *.egg-info/
 dist/
 build/
+eval/human_runs/
 
 # Hallmark design-skill artifacts
 .hallmark/
