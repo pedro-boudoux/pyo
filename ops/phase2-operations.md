@@ -65,7 +65,7 @@ In Coolify, open `pyo-phase2-trainer` → Scheduled Tasks →
 without exposing environment values:
 
 ```bash
-ssh pedro-homelab "docker exec coolify-db psql -U coolify -d coolify -P pager=off -c \"select id,status,started_at,finished_at,duration,left(coalesce(error_details,''),300) as error from scheduled_task_executions where scheduled_task_id=1 order by id desc limit 10;\""
+ssh pedro-homelab "docker exec coolify-db psql -U coolify -d coolify -P pager=off -c \"select id,status,started_at,finished_at,duration,left(coalesce(message,''),300) as output from scheduled_task_executions where scheduled_task_id=1 order by id desc limit 10;\""
 ```
 
 Use `docker logs --tail=160 WORKER_CONTAINER` for container startup only. The

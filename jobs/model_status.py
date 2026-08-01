@@ -67,7 +67,8 @@ def model_status(
         active = cursor.fetchone()
         cursor.execute(
             """SELECT id, status, started_at, finished_at, failure_details
-               FROM model_runs ORDER BY started_at DESC, id DESC LIMIT 1"""
+               FROM model_runs
+               ORDER BY COALESCE(finished_at, started_at) DESC, id DESC LIMIT 1"""
         )
         latest = cursor.fetchone()
         cursor.execute(

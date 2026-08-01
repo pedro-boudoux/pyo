@@ -92,3 +92,23 @@ def test_status_alerts_when_no_active_model(monkeypatch):
     result = model_status.model_status()
     assert result["healthy"] is False
     assert result["alerts"] == ["no_active_model"]
+
+
+def test_latest_attempt_is_ordered_by_completion_time(monkeypatch):
+    statements = []
+
+    @contextmanager
+    def cursor():
+        class Cursor:
+            def execute(self, sql, params=None):
+                statements.append(" ".join(sql.split()))
+
+            def fetchone(self):
+                return None
+
+        yield Cursor()
+
+    monkeypatch.setattr(model_status, "get_cursor", cursor)
+    model_status.model_status()
+
+    assert "ORDER BY COALESCE(finished_at, started_at) DESC" in statements[1]
