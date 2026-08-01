@@ -77,3 +77,21 @@ def test_training_image_stays_alive_for_scheduled_execs():
     dockerfile = (REPO_ROOT / "Dockerfile.training").read_text()
     assert 'CMD ["sleep", "infinity"]' in dockerfile
     assert "ENTRYPOINT" not in dockerfile
+
+
+def test_training_arguments_record_invocation_trigger():
+    class Args:
+        walk_length = 40
+        walks_per_node = 5
+        window = 10
+        epochs = 5
+        workers = 4
+        seed = 42
+        beta = 2.0
+        batch_size = 1000
+        allow_sparse = False
+        dry_run = False
+        model_out = None
+        trigger = "scheduled"
+
+    assert trainer._training_kwargs(Args())["trigger"] == "scheduled"

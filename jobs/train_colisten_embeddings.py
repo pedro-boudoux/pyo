@@ -356,6 +356,7 @@ def _train_candidate(
     allow_sparse: bool = False,
     dry_run: bool = False,
     model_out: str | None = None,
+    trigger: str = "manual",
 ) -> dict:
     """Build a candidate while the caller holds the model-operation lock."""
     params = {
@@ -371,6 +372,7 @@ def _train_candidate(
         "beta": beta,
         "batch_size": batch_size,
         "undirected_pair_weight": "max",
+        "trigger": trigger,
     }
 
     _fail_abandoned_runs()
@@ -934,6 +936,12 @@ def _add_training_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--allow-sparse", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--model-out", default=None)
+    parser.add_argument(
+        "--trigger",
+        choices=("manual", "scheduled"),
+        default="manual",
+        help="record how this model run was invoked",
+    )
 
 
 def _add_validation_arguments(parser: argparse.ArgumentParser) -> None:
@@ -958,6 +966,7 @@ def _training_kwargs(args) -> dict:
         "allow_sparse": args.allow_sparse,
         "dry_run": args.dry_run,
         "model_out": args.model_out,
+        "trigger": args.trigger,
     }
 
 

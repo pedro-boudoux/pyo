@@ -13,7 +13,7 @@ The recurring trainer is a private Coolify application built from
 - Environment: the same encrypted `DATABASE_URL` and `COLISTEN_BETA` values as
   the production API; never copy their resolved values into source or logs
 - Scheduled command:
-  `python -m jobs.train_colisten_embeddings run --workers 4`
+  `python -m jobs.train_colisten_embeddings run --workers 4 --trigger scheduled`
 - Schedule: `0 8 * * 0` (Sunday 08:00 UTC, off-hours in Toronto)
 - Overlap guard: PostgreSQL advisory lock `PYO_PH2`
 
@@ -37,7 +37,7 @@ Before enabling the weekly schedule:
    Postgres resource.
 2. Run `check-density` inside the worker.
 3. Run the scheduled command manually and confirm the new `model_runs` row is
-   `active`.
+   `active` with `params.trigger = scheduled`.
 4. Stage a second candidate and validate it with an intentionally impossible
    `--min-recall-at-k 1.1`; confirm non-zero exit and an unchanged active run.
 5. Enable the schedule and observe one successful scheduled-task execution.
