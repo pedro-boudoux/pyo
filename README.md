@@ -220,9 +220,9 @@ Every song already has one vector that describes how it sounds, built from its t
 
 Recommendations then use both signals: what the song sounds like, and what people actually listen to alongside it. That combined model is what production serves today.
 
-The trainer is not part of the web app. It is a separate program with its own dependencies and its own virtual environment, so the app stays small and fast. It is also picky about when it runs. It refuses to train until the web is big enough to learn from: at least 20,000 songs, with each song linked to about 8 others on average. Every successful run is recorded in the `model_runs` table.
+The trainer is not part of the web app. It is a separate program with its own dependencies and its own virtual environment, so the app stays small and fast. It is also picky about when it runs. It refuses to train until the web is big enough to learn from: at least 20,000 songs, with each song linked to about 8 others on average. Every attempt is recorded in `model_runs`, including failures and interrupted runs discovered by the next invocation.
 
-The first production training run has already happened. Retraining still needs a person to start it and watch it, because it updates the live vectors in batches and a bad run could hurt recommendations. It is not safe to put on a schedule yet. Making it fully automatic is currently in the works.
+The first production training run has already happened. New training runs take a PostgreSQL advisory lock, snapshot the co-listening graph, and write immutable vectors to `model_run_vectors`; they never update the live song vectors. A successful training command ends with a `candidate` run. Validation and atomic publication are tracked separately in GitHub issue #33, so retraining is not ready to schedule yet.
 
 ### The Commands
 
@@ -235,11 +235,13 @@ make train-colisten COLISTEN_ARGS="--check-density --env-file path/to/runtime.en
 make train-colisten COLISTEN_ARGS="--env-file path/to/runtime.env --workers 8 --beta 2.0"
 ```
 
-Once retraining can run unattended, production should run it as a separate scheduled job built from `Dockerfile.training`. The job reads `DATABASE_URL` and `COLISTEN_BETA` from its environment. Verify the database target before you enable the schedule. The training command is:
+The training image reads `DATABASE_URL` and `COLISTEN_BETA` from its environment. Verify the database target before starting it. This command stages a candidate only:
 
 ```bash
 python -m jobs.train_colisten_embeddings --workers 4 --beta "$COLISTEN_BETA"
 ```
+
+It prints the candidate's `run_id`; it does not activate that run.
 
 ### How the model is checked
 

@@ -252,7 +252,7 @@ def init_db():
     _try(f"ALTER TABLE songs ADD COLUMN IF NOT EXISTS colisten_embedding vector({COLISTEN_EMBEDDING_DIM})")
     _try(f"ALTER TABLE songs ADD COLUMN IF NOT EXISTS hybrid_embedding vector({HYBRID_EMBEDDING_DIM})")
 
-    # Safe Phase 2 model publication. Old successful trainer rows predate
+    # Safe Phase 2 candidate staging. Old successful trainer rows predate
     # lifecycle metadata; the newest one describes the vectors currently stored
     # on songs, so migrate it to `active` and mark older rows superseded.
     _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'running'")
@@ -285,6 +285,37 @@ def init_db():
     _try("""
         ALTER TABLE model_runs ADD CONSTRAINT model_runs_status_check
         CHECK (status IN ('running', 'candidate', 'validated', 'active', 'failed', 'superseded'))
+    """)
+    # Preserve a pre-lifecycle active run as a rollback-ready candidate. Never
+    # append to a real immutable candidate on later startups: new songs may have
+    # appeared since its training snapshot.
+    _try("""
+        INSERT INTO model_run_vectors
+            (model_run_id, track_id, colisten_embedding, hybrid_embedding,
+             tag_only_fallback)
+        SELECT run.id, song.track_id, song.colisten_embedding,
+               song.hybrid_embedding, song.colisten_embedding IS NULL
+        FROM model_runs run
+        CROSS JOIN songs song
+        WHERE run.status = 'active' AND song.hybrid_embedding IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM model_run_vectors existing
+              WHERE existing.model_run_id = run.id
+          )
+        ON CONFLICT (model_run_id, track_id) DO NOTHING
+    """)
+    _try("""
+        UPDATE model_runs run SET
+            song_count = candidate.count,
+            songs_updated = candidate.count,
+            fallback_count = candidate.fallback_count
+        FROM (
+            SELECT model_run_id, COUNT(*)::integer AS count,
+                   COUNT(*) FILTER (WHERE tag_only_fallback)::integer AS fallback_count
+            FROM model_run_vectors GROUP BY model_run_id
+        ) candidate
+        WHERE run.id = candidate.model_run_id AND run.status = 'active'
+          AND run.song_count IS NULL
     """)
 
     # Ensure unique constraints and indexes exist regardless of how the table was created

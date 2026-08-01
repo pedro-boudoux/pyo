@@ -385,12 +385,33 @@ CREATE TABLE colisten_crawl_state (
 CREATE TABLE model_runs (
     id BIGSERIAL PRIMARY KEY,
     model TEXT NOT NULL,
-    trained_at TIMESTAMPTZ DEFAULT now(),
-    node_count BIGINT NOT NULL,
-    edge_count BIGINT NOT NULL,
+    status TEXT NOT NULL,       -- running/candidate/validated/active/failed/superseded
+    started_at TIMESTAMPTZ DEFAULT now(),
+    trained_at TIMESTAMPTZ,
+    validated_at TIMESTAMPTZ,
+    published_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ,
+    edge_cutoff TIMESTAMPTZ,
+    node_count BIGINT NOT NULL DEFAULT 0,
+    edge_count BIGINT NOT NULL DEFAULT 0,
     dimension INTEGER,
+    hybrid_dimension INTEGER,
+    song_count INTEGER,
     songs_updated INTEGER,
-    params jsonb
+    fallback_count INTEGER,
+    params jsonb,
+    validation jsonb,
+    failure_details TEXT,
+    previous_active_run_id BIGINT REFERENCES model_runs(id)
+);
+
+CREATE TABLE model_run_vectors (
+    model_run_id BIGINT REFERENCES model_runs(id),
+    track_id TEXT REFERENCES songs(track_id),
+    colisten_embedding vector(128),
+    hybrid_embedding vector(512) NOT NULL,
+    tag_only_fallback BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (model_run_id, track_id)
 );
 ```
 
