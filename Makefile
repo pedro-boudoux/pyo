@@ -16,7 +16,7 @@ TRAIN_VENV ?= .venv-train
 PYTHON_312 ?= python3.12
 STRESS_URL ?= http://localhost:8000
 
-.PHONY: db db-down db-reset api web test stress install train-install crawl-colisten train-colisten rebuild-hybrid build-colisten-ground-truth
+.PHONY: db db-down db-reset api web test stress install train-install crawl-colisten train-colisten validate-colisten publish-colisten rollback-colisten rebuild-hybrid build-colisten-ground-truth
 
 db:
 	docker compose up -d
@@ -57,7 +57,16 @@ crawl-colisten:
 	$(VENV)/bin/python -m jobs.crawl_colisten $(COLISTEN_ARGS)
 
 train-colisten:
-	$(TRAIN_VENV)/bin/python -m jobs.train_colisten_embeddings $(COLISTEN_ARGS)
+	$(TRAIN_VENV)/bin/python -m jobs.train_colisten_embeddings train $(COLISTEN_ARGS)
+
+validate-colisten:
+	$(TRAIN_VENV)/bin/python -m jobs.train_colisten_embeddings validate $(MODEL_RUN_ID) $(COLISTEN_ARGS)
+
+publish-colisten:
+	$(TRAIN_VENV)/bin/python -m jobs.train_colisten_embeddings publish $(MODEL_RUN_ID)
+
+rollback-colisten:
+	$(TRAIN_VENV)/bin/python -m jobs.train_colisten_embeddings rollback $(MODEL_RUN_ID)
 
 rebuild-hybrid:
 	$(VENV)/bin/python -m jobs.rebuild_hybrid_embeddings $(COLISTEN_ARGS)

@@ -135,7 +135,9 @@ def test_interrupted_batch_marks_run_failed_and_never_updates_active_vectors(mon
 
     assert failures[0][0] == 41
     assert isinstance(failures[0][1], KeyboardInterrupt)
-    source = inspect.getsource(trainer)
+    source = inspect.getsource(trainer.train) + inspect.getsource(
+        trainer._stage_song_vectors
+    )
     assert "UPDATE songs" not in source
     assert "SET colisten_embedding" not in source
 

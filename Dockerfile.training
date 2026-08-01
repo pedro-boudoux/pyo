@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt -r requirements-jobs.txt
 
 COPY app ./app
 COPY jobs ./jobs
+COPY eval/ground_truth_colisten.json ./eval/ground_truth_colisten.json
 
 ENTRYPOINT ["python", "-m", "jobs.train_colisten_embeddings"]
-CMD ["--workers", "4"]
+CMD ["train", "--workers", "4"]
