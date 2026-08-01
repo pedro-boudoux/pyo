@@ -125,11 +125,14 @@ database, inspecting the JSON after every command:
 python -m jobs.remove_legacy_embedding status
 python -m jobs.remove_legacy_embedding backup
 python -m jobs.remove_legacy_embedding verify-backup
+python -m jobs.remove_legacy_embedding restore-drill
 python -m jobs.remove_legacy_embedding drop --confirm 'DROP embedding_legacy_300'
 ```
 
-The backup is the durable table `songs_embedding_legacy_300_backup`. Test the
-reverse path before authorizing the drop in production:
+The backup is the durable table `songs_embedding_legacy_300_backup`.
+`restore-drill` exercises the real PostgreSQL drop, add-column, data-copy, and
+equality-check path, then rolls the whole transaction back so the production
+column never disappears. If a committed drop must be reversed later, run:
 
 ```bash
 python -m jobs.remove_legacy_embedding restore

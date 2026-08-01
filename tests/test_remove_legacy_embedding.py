@@ -61,6 +61,28 @@ class FakeCursor:
         row, self._row = self._row, None
         return row
 
+    def close(self):
+        pass
+
+
+class FakeConnection:
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.commits = 0
+        self.rollbacks = 0
+
+    def cursor(self):
+        return self._cursor
+
+    def commit(self):
+        self.commits += 1
+
+    def rollback(self):
+        self.rollbacks += 1
+
+    def close(self):
+        pass
+
 
 def sql_text(cursor):
     return "\n".join(sql for sql, _ in cursor.statements)
@@ -124,6 +146,29 @@ def test_restore_recreates_only_the_legacy_column_and_verifies_it():
     assert "ADD COLUMN IF NOT EXISTS embedding_legacy_300 vector(300)" in statements
     assert "SET embedding_legacy_300 = backup.embedding" in statements
     assert "DROP COLUMN" not in statements
+
+
+def test_restore_drill_exercises_drop_and_restore_path():
+    cursor = FakeCursor(column_exists=True, backup_exists=True)
+
+    result = cleanup._restore_drill(cursor)
+
+    assert result["drill_passed"] is True
+    statements = sql_text(cursor)
+    assert "ALTER TABLE songs DROP COLUMN embedding_legacy_300" in statements
+    assert "ADD COLUMN IF NOT EXISTS embedding_legacy_300 vector(300)" in statements
+    assert "SET embedding_legacy_300 = backup.embedding" in statements
+
+
+def test_execute_always_rolls_back_restore_drill(monkeypatch):
+    connection = FakeConnection(FakeCursor(column_exists=True, backup_exists=True))
+    monkeypatch.setattr(cleanup, "get_connection", lambda: connection)
+
+    result = cleanup.execute("restore-drill")
+
+    assert result["drill_passed"] is True
+    assert connection.commits == 0
+    assert connection.rollbacks == 1
 
 
 @pytest.mark.parametrize(

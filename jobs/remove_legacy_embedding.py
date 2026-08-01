@@ -171,6 +171,17 @@ def _restore(cursor) -> dict:
     return {"restored": True, "backup": verification}
 
 
+def _restore_drill(cursor) -> dict:
+    if not _column_exists(cursor):
+        raise RuntimeError(f"songs.{LEGACY_COLUMN} must exist before the restore drill")
+    before = _verify_backup(cursor)
+    if not before["verified"]:
+        raise RuntimeError(f"legacy backup verification failed: {before}")
+    cursor.execute(f"ALTER TABLE songs DROP COLUMN {LEGACY_COLUMN}")
+    after = _restore(cursor)
+    return {"drill_passed": True, "before": before, "after": after["backup"]}
+
+
 def execute(command: str, *, confirmation: str = "") -> dict:
     connection = get_connection()
     cursor = connection.cursor()
@@ -190,9 +201,16 @@ def execute(command: str, *, confirmation: str = "") -> dict:
             result = _drop(cursor, confirmation)
         elif command == "restore":
             result = _restore(cursor)
+        elif command == "restore-drill":
+            result = _restore_drill(cursor)
         else:  # pragma: no cover - argparse constrains this
             raise ValueError(f"unknown command: {command}")
-        connection.commit()
+        if command == "restore-drill":
+            # Exercise the real DDL and data-copy path, but leave production
+            # schema/data exactly as they were before the drill.
+            connection.rollback()
+        else:
+            connection.commit()
         return result
     except BaseException:
         connection.rollback()
@@ -205,7 +223,15 @@ def execute(command: str, *, confirmation: str = "") -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "command", choices=("status", "backup", "verify-backup", "drop", "restore")
+        "command",
+        choices=(
+            "status",
+            "backup",
+            "verify-backup",
+            "restore-drill",
+            "drop",
+            "restore",
+        ),
     )
     parser.add_argument("--confirm", default="")
     args = parser.parse_args()
