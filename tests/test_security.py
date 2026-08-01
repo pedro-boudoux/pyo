@@ -38,6 +38,6 @@ def test_real_maintenance_route_stops_before_database_work(monkeypatch):
     from app.main import app
 
     monkeypatch.setattr(security, "MAINTENANCE_API_KEY", None)
-    response = TestClient(app).post("/songs/reembed")
+    response = TestClient(app).post("/songs/backfill-semantic-embeddings")
     assert response.status_code == 503
     assert response.json()["detail"] == "Maintenance endpoints are disabled"

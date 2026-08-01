@@ -175,8 +175,9 @@ specific track and its broader stylistic context:
 > was a sparse `vector(300)` where each `tag_vocab.id` *was* a dimension and the
 > value was the normalized blended count. The problem: unrelated spellings/synonyms
 > ("hip hop" vs "rap") landed in unrelated slots, so semantically close tracks
-> weren't close in vector space. The dense semantic model below fixes that. The old
-> 300-dim vector is preserved per row as `embedding_legacy_300` for rollback.
+> weren't close in vector space. The dense semantic model below fixes that. The
+> obsolete sparse column was retired after the Phase 2 production soak; Stage A
+> rollback uses the intact semantic `songs.embedding` column.
 
 The pipeline (`embeddings.build_tag_vector` → `tag_encoder`):
 
@@ -312,7 +313,6 @@ CREATE TABLE songs (
     listeners  INTEGER,
     image      TEXT,                   -- resolved album/artist cover URL
     embedding  vector(384),            -- dense semantic tag vector (algorithm 2.0, Phase 1)
-    embedding_legacy_300 vector(300),  -- old sparse slot vector, kept for rollback
     colisten_embedding vector(128),    -- weighted random-walk graph vector (nullable)
     hybrid_embedding vector(512),      -- normalize(concat(tag, beta * colisten))
     tags       jsonb,                  -- raw blended {tag: count} dict (dominant_tags / /features read this)
@@ -478,22 +478,12 @@ means "no variant folding" for that song (graceful degradation). Pass
 `canonical_title` rules change — existing keys were computed under the old rules.
 
 ```
-POST /songs/repack-vocab
+POST /songs/backfill-semantic-embeddings?limit={n}
 ```
-Maintenance: re-packs `tag_vocab.id` to be dense (1..N) and NULLs all
-`songs.embedding` values so `/reembed` rebuilds them. **Largely vestigial under
-algorithm 2.0** — `tag_vocab.id` is no longer a vector dimension, so id density no
-longer affects embeddings. It survives mainly as the "null every embedding so they
-get rebuilt" trigger; the meaningful per-tag data now lives in `tag_vocab.embedding`.
-
-```
-POST /songs/reembed?limit={n}
-```
-Maintenance: re-embeds up to `n` songs with `embedding IS NULL`, re-fetching tags
+Maintenance: embeds up to `n` songs with `embedding IS NULL`, re-fetching tags
 from Last.fm and rebuilding the dense 384-dim semantic vector (`build_tag_vector`,
 reusing cached per-tag MiniLM vectors from `tag_vocab.embedding`). Call repeatedly
-until `remaining` is 0 — this is how a DB is migrated onto the algorithm 2.0
-embedding after `_migrate_embedding_to_384()` adds the new (NULL) column.
+until `remaining` is 0.
 
 ### Graph
 
@@ -627,7 +617,6 @@ STEERING_ALPHA      = 0.3      # reject steering strength
 DEFAULT_K           = 10       # default neighbors per query
 EMBEDDING_DIM       = 384      # retained Stage A / instant rollback vector
 TAG_EMBEDDING_DIM   = 384      # semantic tag half (all-MiniLM-L6-v2 output)
-LEGACY_EMBEDDING_DIM = 300     # old sparse vector, kept as embedding_legacy_300 for rollback
 COLISTEN_EMBEDDING_DIM = 128
 HYBRID_EMBEDDING_DIM = 512
 RECOMMENDATION_MODEL = "stage_a"  # safe code/local default; Coolify prod overrides to hybrid
@@ -661,7 +650,7 @@ disabled when `RATE_LIMIT_ENABLED` is falsey; the test suite sets that in
 `conftest.py` and `test_ratelimit.py` builds its own enabled limiter to exercise
 the production header + 429 path.
 
-Bulk maintenance routes (`/songs/reembed`, `/songs/repack-vocab`, and both
+Bulk maintenance routes (`/songs/backfill-semantic-embeddings` and the other
 `/songs/backfill-*` routes) use `RATE_LIMIT_MAINTENANCE` and also require
 `X-Maintenance-Key` to match `MAINTENANCE_API_KEY`. They return 503 when no key
 is configured, keeping them disabled on a public deployment by default.
