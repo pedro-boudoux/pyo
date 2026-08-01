@@ -222,7 +222,7 @@ Recommendations then use both signals: what the song sounds like, and what peopl
 
 The trainer is not part of the web app. It is a separate program with its own dependencies and its own virtual environment, so the app stays small and fast. It is also picky about when it runs. It refuses to train until the web is big enough to learn from: at least 20,000 songs, with each song linked to about 8 others on average. Every attempt is recorded in `model_runs`, including failures and interrupted runs discovered by the next invocation.
 
-The first production training run has already happened. New training runs take a PostgreSQL advisory lock, snapshot the co-listening graph, and write immutable vectors to `model_run_vectors`; they never update the live song vectors. A successful training command ends with a `candidate` run. Validation and atomic publication are tracked separately in GitHub issue #33, so retraining is not ready to schedule yet.
+The first production training run has already happened. New training runs take a PostgreSQL advisory lock, snapshot the co-listening graph, and write immutable vectors to `model_run_vectors`; they never update the live song vectors. A successful training command ends with a `candidate` run. Validation checks vector structure, complete coverage, graph density, fallbacks, and a bounded independent sample. Publication and rollback replace all candidate vectors in one transaction, so readers never see a batchwise mixture.
 
 ### The Commands
 
@@ -231,17 +231,22 @@ If you run the backend locally and want to retrain a fresh model:
 ```bash
 make train-install
 make crawl-colisten
-make train-colisten COLISTEN_ARGS="--check-density --env-file path/to/runtime.env"
-make train-colisten COLISTEN_ARGS="--env-file path/to/runtime.env --workers 8 --beta 2.0"
+python -m jobs.train_colisten_embeddings --env-file path/to/runtime.env check-density
+make train-colisten COLISTEN_ARGS="--workers 8 --beta 2.0"
+make validate-colisten MODEL_RUN_ID=123
+make publish-colisten MODEL_RUN_ID=123
+make rollback-colisten
 ```
 
 The training image reads `DATABASE_URL` and `COLISTEN_BETA` from its environment. Verify the database target before starting it. This command stages a candidate only:
 
 ```bash
-python -m jobs.train_colisten_embeddings --workers 4 --beta "$COLISTEN_BETA"
+python -m jobs.train_colisten_embeddings train --workers 4 --beta "$COLISTEN_BETA"
 ```
 
-It prints the candidate's `run_id`; it does not activate that run.
+It prints the candidate's `run_id`; pass that ID to `validate` and then
+`publish`. `rollback` without an ID republishes the active run's retained
+predecessor. Candidate training and failed validation never alter live vectors.
 
 ### How the model is checked
 
