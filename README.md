@@ -37,10 +37,37 @@ Two consequences are worth knowing:
 
 Finding "songs like this one" starts as a nearest-neighbor search, but the loop does more:
 
-- **Steering.** Reject a song and the next query leans away from it. The query becomes `seed − α·rejected`, with α = 0.3.
+- **Steering.** Deliberately remove a recommendation and later expansions from
+  the parent that produced it lean away from that song and cannot return the
+  exact removed track.
 - **Over-fetch + MMR.** pyo pulls three times more candidates than it needs, then re-ranks them to balance relevance against diversity (λ = 0.7). It allows at most two tracks per artist.
 - **Last.fm top-up.** If the local search still comes up short, pyo fetches the seed's `getSimilar` tracks, embeds them, scores them, and fills the gap.
 - **Cold-start fallback.** If a seed has no usable `track.getSimilar` at all, pyo falls back to the similar *artists'* top tracks. So even the most pretencious song picks get recommendations (although your mileage may vary here). 
+
+### Steering after rejection
+
+Removing a non-seed song is persisted as feedback for each visible incoming
+parent. Scope matters: rejecting track X from parent A changes later expansions
+from A, but it does not affect parent B even if B also points to X.
+
+For each parent, pyo subtracts the embeddings of its rejected children from the
+parent's query vector, then normalizes the result:
+
+```
+query = parent_embedding − 0.3 × Σ rejected_embeddings
+```
+
+Steering changes the direction of nearby results, while a separate hard
+exclusion prevents the exact rejected track from returning. Both rules apply to
+MMR recommendations, linear playlists, every parent visited during tree
+expansion, and re-seeding an existing parent.
+
+New rejection rows store an explicit `source_track_id` and are idempotent per
+parent/track pair. Historical rows without a source remain compatible by
+inferring their parent from the old graph edge. Removing a seed, automatic
+orphan pruning, blocking an artist, and restarting the graph do not create
+rejection feedback. If saving feedback fails, the frontend keeps the song on the
+graph so the removal can be retried.
 
 ### Seeding the graph
 
