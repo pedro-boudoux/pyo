@@ -248,7 +248,9 @@ The individual `train`, `validate`, and `publish` commands remain available for
 manual inspection. `rollback` without an ID republishes the active run's retained
 predecessor. Candidate training and failed validation never alter live vectors.
 The private Coolify worker configuration and bounded-crawl policy are documented
-in [`ops/coolify-phase2-worker.md`](ops/coolify-phase2-worker.md).
+in [`ops/coolify-phase2-worker.md`](ops/coolify-phase2-worker.md). Freshness
+monitoring, logs, rollback, and production smoke procedures are in
+[`ops/phase2-operations.md`](ops/phase2-operations.md).
 
 ### How the model is checked
 
