@@ -253,7 +253,9 @@ The test set lives at `eval/ground_truth_colisten.json`, and the full results ar
 
 ## What comes next
 
-The remaining work is ordered in [`PROJECT_PLAN.md`](PROJECT_PLAN.md): atomic recurring training, the Coolify schedule, country/language tag attenuation, cold-start ablations, steering evaluation, human A/B evaluation, observability, and eventual removal of only the obsolete 300-dimensional sparse model.
+The remaining work, dependencies, and acceptance criteria are tracked in
+[GitHub issues #32–#40](https://github.com/pedro-boudoux/pyo/issues). Atomic model
+publication and safe recurring training come first.
 
 ---
 

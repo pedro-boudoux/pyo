@@ -184,14 +184,38 @@ def init_db():
 
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS model_runs (
-                id            BIGSERIAL PRIMARY KEY,
-                model         TEXT NOT NULL,
-                trained_at    TIMESTAMPTZ DEFAULT now(),
-                node_count    BIGINT NOT NULL,
-                edge_count    BIGINT NOT NULL,
-                dimension     INTEGER,
-                songs_updated INTEGER,
-                params        jsonb
+                id                     BIGSERIAL PRIMARY KEY,
+                model                  TEXT NOT NULL,
+                status                 TEXT NOT NULL DEFAULT 'running',
+                started_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
+                trained_at             TIMESTAMPTZ,
+                validated_at           TIMESTAMPTZ,
+                published_at           TIMESTAMPTZ,
+                finished_at            TIMESTAMPTZ,
+                edge_cutoff            TIMESTAMPTZ,
+                node_count             BIGINT NOT NULL DEFAULT 0,
+                edge_count             BIGINT NOT NULL DEFAULT 0,
+                dimension              INTEGER,
+                hybrid_dimension       INTEGER,
+                song_count             INTEGER,
+                songs_updated          INTEGER,
+                fallback_count         INTEGER,
+                params                 jsonb,
+                validation             jsonb,
+                failure_details        TEXT,
+                previous_active_run_id BIGINT REFERENCES model_runs(id)
+            )
+        """)
+
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS model_run_vectors (
+                model_run_id       BIGINT NOT NULL REFERENCES model_runs(id) ON DELETE CASCADE,
+                track_id           TEXT NOT NULL REFERENCES songs(track_id) ON DELETE CASCADE,
+                colisten_embedding vector({COLISTEN_EMBEDDING_DIM}),
+                hybrid_embedding   vector({HYBRID_EMBEDDING_DIM}) NOT NULL,
+                tag_only_fallback  BOOLEAN NOT NULL DEFAULT false,
+                created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+                PRIMARY KEY (model_run_id, track_id)
             )
         """)
 
@@ -228,12 +252,49 @@ def init_db():
     _try(f"ALTER TABLE songs ADD COLUMN IF NOT EXISTS colisten_embedding vector({COLISTEN_EMBEDDING_DIM})")
     _try(f"ALTER TABLE songs ADD COLUMN IF NOT EXISTS hybrid_embedding vector({HYBRID_EMBEDDING_DIM})")
 
+    # Safe Phase 2 model publication. Old successful trainer rows predate
+    # lifecycle metadata; the newest one describes the vectors currently stored
+    # on songs, so migrate it to `active` and mark older rows superseded.
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'running'")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ NOT NULL DEFAULT now()")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS finished_at TIMESTAMPTZ")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS edge_cutoff TIMESTAMPTZ")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS hybrid_dimension INTEGER")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS song_count INTEGER")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS fallback_count INTEGER")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS validation jsonb")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS failure_details TEXT")
+    _try("ALTER TABLE model_runs ADD COLUMN IF NOT EXISTS previous_active_run_id BIGINT REFERENCES model_runs(id)")
+    _try("ALTER TABLE model_runs ALTER COLUMN node_count SET DEFAULT 0")
+    _try("ALTER TABLE model_runs ALTER COLUMN edge_count SET DEFAULT 0")
+    _try("UPDATE model_runs SET started_at = COALESCE(started_at, trained_at, now())")
+    _try("UPDATE model_runs SET status = 'superseded' WHERE status = 'running' AND trained_at IS NOT NULL")
+    _try("""
+        UPDATE model_runs SET status = 'active',
+            validated_at = COALESCE(validated_at, trained_at),
+            published_at = COALESCE(published_at, trained_at),
+            finished_at = COALESCE(finished_at, trained_at)
+        WHERE id = (
+            SELECT id FROM model_runs
+            WHERE trained_at IS NOT NULL
+            ORDER BY trained_at DESC, id DESC LIMIT 1
+        ) AND NOT EXISTS (SELECT 1 FROM model_runs WHERE status = 'active')
+    """)
+    _try("""
+        ALTER TABLE model_runs ADD CONSTRAINT model_runs_status_check
+        CHECK (status IN ('running', 'candidate', 'validated', 'active', 'failed', 'superseded'))
+    """)
+
     # Ensure unique constraints and indexes exist regardless of how the table was created
     _try("CREATE UNIQUE INDEX IF NOT EXISTS songs_track_id_unique ON songs(track_id)")
     _try("CREATE UNIQUE INDEX IF NOT EXISTS graph_nodes_track_id_unique ON graph_nodes(track_id)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_embedding ON songs USING hnsw (embedding vector_cosine_ops)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_hybrid_embedding ON songs USING hnsw (hybrid_embedding vector_cosine_ops)")
     _try("CREATE INDEX IF NOT EXISTS idx_songs_canonical_key ON songs(canonical_key)")
+    _try("CREATE UNIQUE INDEX IF NOT EXISTS idx_model_runs_one_active ON model_runs ((status)) WHERE status = 'active'")
+    _try("CREATE INDEX IF NOT EXISTS idx_model_run_vectors_track ON model_run_vectors(track_id)")
     _try("CREATE UNIQUE INDEX IF NOT EXISTS idx_graph_edges_source_target ON graph_edges(source_id, target_id)")
 
     # Co-listening edges: unique per (source, target, provenance) so recording the

@@ -30,8 +30,7 @@ Visual reference for how the Underground Music Discovery backend actually works
 >   `colisten_embedding` and builds a separately indexed `hybrid_embedding`
 >   (`vector(512)`). Production serves the hybrid path at `COLISTEN_BETA=2`;
 >   `RECOMMENDATION_MODEL` can switch back to intact Stage A for instant rollback.
->   See `PHASE2_TODAY_PLAN.md` for the rollout record and `PROJECT_PLAN.md` for
->   remaining work.
+>   Remaining implementation work is tracked in GitHub issues #32–#40.
 
 ## Two shared building blocks
 

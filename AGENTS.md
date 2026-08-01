@@ -206,7 +206,7 @@ no longer a vector slot — it's just the row PK; the meaningful column is
 > serves `RECOMMENDATION_MODEL=hybrid` at the independently selected
 > `COLISTEN_BETA=2`; the intact 384-dim Stage A column remains the tag half and
 > config-only rollback. Scheduled retraining still requires candidate staging and
-> atomic publication; see `PROJECT_PLAN.md`.
+> atomic publication; see GitHub issues #32–#34.
 
 ### ANN search + diversity (recommendations)
 
@@ -549,7 +549,7 @@ Both return `{ "seed_track_id": "abc", "tracks": [PlaylistTrack...] }`.
 
 ```
 discover/
-├── CLAUDE.md
+├── AGENTS.md                 # repository/runtime instructions for coding agents
 ├── ARCHITECTURE.md           # Mermaid diagrams of every flow
 ├── README.md
 ├── requirements.txt
@@ -742,4 +742,5 @@ restart will not apply changed Coolify environment variables.
   count-weighted average. Phase 2 keeps Stage A in `embedding` and builds the 512-dim
   candidate in `hybrid_embedding`, concatenating a 128-dim co-listening vector. If
   dimensions change, update all dimension constants and vector columns, then rebuild
-  both tag and hybrid vectors. See `NEW_ALGORITHM_IMPLEMENTATION.md`.
+  both tag and hybrid vectors. The current follow-up work is tracked in GitHub
+  issues #32–#40.
