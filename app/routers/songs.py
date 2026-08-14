@@ -4,6 +4,7 @@ from app.models import SongSearchResult, TrackFeatures
 from app.ratelimit import limiter
 from app.security import require_maintenance_key
 from app.services import lastfm, ingest, embeddings as emb_service, spotify
+from app.services import covers
 from app.services.covers import get_cover_url, is_broken_image
 from app.services.vector_utils import to_float_list
 from app.db import get_cursor
@@ -91,8 +92,10 @@ def _upsert_songs(tracks: list[dict]) -> None:
 
 """
     Entry point for the user, takes user's search input and returns a track that matches that query.
-    Runs a local DB search and Last.fm search in parallel, merges them, then only fetches
-    covers from Deezer / iTunes for tracks we don't already have a real cover for.
+    Runs a local DB search and Last.fm search in parallel and merges them.
+    Covers never block the response: rows go out with their cached cover (or
+    null) and the frontend lazily resolves the missing ones via
+    GET /songs/{track_id}/cover, which resolves + persists per track.
     /search?q={USER_INPUT}
 """
 @router.get("/search", response_model=list[SongSearchResult])
@@ -150,23 +153,17 @@ def search_songs(
 
     merged = merged[:SEARCH_LIMIT]
 
-    # Reuse cached covers: only call Deezer/iTunes for tracks without a real one
+    # Covers: reuse the cached one if we have a real one, otherwise keep a
+    # usable Last.fm image, else ship null. Deezer/iTunes resolution happens
+    # lazily per track via /songs/{track_id}/cover so a slow provider can never
+    # stall the dropdown.
     cached_images = _fetch_cached_images([t["track_id"] for t in merged])
-    need_cover: list[dict] = []
     for t in merged:
         cached = cached_images.get(t["track_id"])
         if cached and not is_broken_image(cached):
             t["image"] = cached
         elif is_broken_image(t.get("image")):
-            need_cover.append(t)
-
-    if need_cover:
-        with ThreadPoolExecutor(max_workers=8) as pool:
-            covers = list(
-                pool.map(lambda t: get_cover_url(t["artist"], t["name"]), need_cover)
-            )
-        for t, cover in zip(need_cover, covers):
-            t["image"] = cover  # cover may be None — that's fine
+            t["image"] = None
 
     _upsert_songs(merged)
 
@@ -416,6 +413,59 @@ def get_song_spotify_link(request: Request, response: Response, track_id: str):
             "UPDATE songs SET spotify_url = %s, spotify_checked_at = now() WHERE track_id = %s",
             (url, track_id),
         )
+    return {"url": url, "checked": True}
+
+
+"""
+    Lazily resolve an album cover for a track via Deezer → iTunes → Deezer
+    artist photo. Returns { url, checked } with the same semantics as the
+    Spotify endpoint: checked=false only means the providers couldn't be
+    reached (not a definitive "no cover"), and that outcome isn't persisted.
+
+    The answer is persisted on songs (image + cover_checked_at): the first call
+    resolves and stores it — including the definitive miss, so a track with no
+    cover anywhere is looked up once ever — and later calls serve the stored
+    value without hitting providers. Deliberately NOT rate-limited heavy: the
+    frontend fires one per uncovered search result, and upstream fan-out
+    happens at most once per track thanks to the persistence above.
+"""
+@router.get("/{track_id}/cover")
+def get_song_cover(track_id: str):
+    with get_cursor() as cursor:
+        cursor.execute(
+            "SELECT name, artist, image, cover_checked_at FROM songs WHERE track_id = %s",
+            (track_id,),
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        raise HTTPException(404, "Track not found — search for it first")
+
+    # Cache hit: a real stored cover, or a previously-resolved definitive miss.
+    if not is_broken_image(row["image"]):
+        return {"url": row["image"], "checked": True}
+    if row["cover_checked_at"] is not None:
+        return {"url": None, "checked": True}
+
+    # Cache miss: resolve once and persist. CoversUnavailable (every provider
+    # errored) is not a definitive answer — leave the row unchecked, report
+    # checked=false, and let a later call retry.
+    try:
+        url = covers.resolve_cover(row["artist"], row["name"])
+    except covers.CoversUnavailable:
+        return {"url": None, "checked": False}
+
+    with get_cursor() as cursor:
+        if url:
+            cursor.execute(
+                "UPDATE songs SET image = %s, cover_checked_at = now() WHERE track_id = %s",
+                (url, track_id),
+            )
+        else:
+            cursor.execute(
+                "UPDATE songs SET cover_checked_at = now() WHERE track_id = %s",
+                (track_id,),
+            )
     return {"url": url, "checked": True}
 
 

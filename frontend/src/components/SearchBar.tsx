@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { searchSongs } from "../api";
+import { searchSongs, getSongCover } from "../api";
 import type { SongSearchResult } from "../types";
 import { Spinner } from "./Loader";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -39,6 +39,21 @@ export function SearchBar({ onPick, placeholder, placeholderShort, autoFocus, dr
         if (reqIdRef.current === myReq) {
           setResults(data);
           setOpen(true);
+          // Covers arrive lazily — rows without one render instantly and pop in
+          // as each per-track resolve returns.
+          for (const r of data) {
+            if (r.image) continue;
+            getSongCover(r.track_id)
+              .then((c) => {
+                if (!c.url) return;
+                setResults((prev) =>
+                  prev.map((p) =>
+                    p.track_id === r.track_id ? { ...p, image: c.url } : p,
+                  ),
+                );
+              })
+              .catch(() => {});
+          }
         }
       } catch {
         if (reqIdRef.current === myReq) setResults([]);

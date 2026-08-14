@@ -113,6 +113,7 @@ def init_db():
                 tags       jsonb,
                 spotify_url        TEXT,
                 spotify_checked_at TIMESTAMPTZ,
+                cover_checked_at   TIMESTAMPTZ,
                 created_at TIMESTAMPTZ DEFAULT now()
             )
         """)
@@ -228,6 +229,11 @@ def init_db():
     # up" (NULL) from "looked up, not on Spotify" (set, with spotify_url NULL).
     _try("ALTER TABLE songs ADD COLUMN IF NOT EXISTS spotify_url TEXT")
     _try("ALTER TABLE songs ADD COLUMN IF NOT EXISTS spotify_checked_at TIMESTAMPTZ")
+    # Cover lookup state, same idea as spotify_checked_at: distinguishes "never
+    # resolved" (NULL) from "resolved, no cover anywhere" (set, image still
+    # NULL/placeholder) so a definitive miss is never re-fetched. Search no
+    # longer blocks on covers — GET /songs/{track_id}/cover resolves lazily.
+    _try("ALTER TABLE songs ADD COLUMN IF NOT EXISTS cover_checked_at TIMESTAMPTZ")
     # Canonical identity: sha1(artist|||canonical_title) — folds cosmetic variants
     # (clean/explicit/remastered) of one recording together so they don't dedupe
     # only against their exact track_id. Nullable: an unset value just behaves like
