@@ -13,10 +13,9 @@ def _patch_seams(monkeypatch, lastfm_tracks, local_tracks):
     # Last.fm + local DB are the two inputs to the merge.
     monkeypatch.setattr(songs.lastfm, "search_tracks", lambda q: list(lastfm_tracks))
     monkeypatch.setattr(songs, "_search_local_songs", lambda q: list(local_tracks))
-    # Skip cover resolution and the DB upsert entirely.
+    # Skip the cover-cache lookup and the DB upsert entirely.
     monkeypatch.setattr(songs, "_fetch_cached_images", lambda ids: {})
     monkeypatch.setattr(songs, "_upsert_songs", lambda tracks: None)
-    monkeypatch.setattr(songs, "get_cover_url", lambda artist, name: None)
 
 
 def test_explicit_and_clean_variants_collapse(monkeypatch):
@@ -70,3 +69,24 @@ def test_live_version_is_kept_separate(monkeypatch):
     results = songs.search_songs(request=None, response=None, q="idioteque")
 
     assert len(results) == 2
+
+
+def test_search_never_resolves_covers_inline(monkeypatch):
+    """Covers load lazily via /songs/{id}/cover — search must not block on providers."""
+    _patch_seams(
+        monkeypatch,
+        lastfm_tracks=[{"name": "Idioteque", "artist": "Radiohead", "image": None}],
+        local_tracks=[],
+    )
+
+    def boom(*a, **kw):
+        raise AssertionError("search must not call cover providers")
+
+    monkeypatch.setattr(songs.covers, "resolve_cover", boom)
+    monkeypatch.setattr(songs, "get_cover_url", boom)
+
+    results = songs.search_songs(request=None, response=None, q="idioteque")
+
+    # No cached cover and a broken/absent Last.fm image → null, not a fetch.
+    assert len(results) == 1
+    assert results[0].image is None

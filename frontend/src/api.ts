@@ -58,6 +58,30 @@ export function getSpotifyLink(track_id: string) {
   );
 }
 
+// Covers resolve lazily per search result (the search endpoint never blocks on
+// Deezer/iTunes). Session-level cache so refining a query doesn't re-fetch a
+// cover we already resolved — the promise itself is cached, which also dedupes
+// in-flight calls. Failures and checked=false (provider outage) are evicted so
+// they retry next time.
+const coverCache = new Map<
+  string,
+  Promise<{ url: string | null; checked: boolean }>
+>();
+
+export function getSongCover(track_id: string) {
+  let p = coverCache.get(track_id);
+  if (!p) {
+    p = request<{ url: string | null; checked: boolean }>(
+      `/songs/${track_id}/cover`,
+    );
+    coverCache.set(track_id, p);
+    p.then((r) => {
+      if (!r.checked) coverCache.delete(track_id);
+    }).catch(() => coverCache.delete(track_id));
+  }
+  return p;
+}
+
 export function seedSong(track_id: string) {
   return request<{ track_id: string; name: string; artist: string }>(
     `/graph/seed`,

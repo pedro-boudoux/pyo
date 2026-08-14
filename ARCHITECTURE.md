@@ -231,22 +231,26 @@ flowchart TD
 
 ## 4. Song search (`GET /songs/search`)
 
+Search never blocks on covers: rows ship with their cached cover (or null) and
+the frontend lazily resolves the gaps via `GET /songs/{track_id}/cover`
+(section 10a), so a slow Deezer/iTunes provider can't stall the dropdown.
+
 ```mermaid
 flowchart LR
     q(["q = user query"]) --> par
 
     subgraph par["Parallel (ThreadPoolExecutor)"]
         local["_search_local_songs<br/>ILIKE on songs table"]
-        lfm["lastfm.search_tracks<br/>track.search"]
+        lfm["lastfm.search_tracks<br/>track.search (5s timeout)"]
     end
 
     par --> merge["merge: Last.fm first,<br/>then local-only<br/>(dedupe by track_id)"]
     merge --> trim["trim to SEARCH_LIMIT (15)"]
     trim --> covercheck{"cover cached<br/>& not broken?"}
     covercheck -->|yes| usecached["reuse cached cover"]
-    covercheck -->|no| fetchcover["get_cover_url in parallel<br/>(Deezer/iTunes)"]
+    covercheck -->|no| nullimg["image = null<br/>(frontend lazy-loads it)"]
     usecached --> upsert
-    fetchcover --> upsert[("_upsert_songs<br/>COALESCE keeps good covers")]
+    nullimg --> upsert[("_upsert_songs<br/>COALESCE keeps good covers")]
     upsert --> resp(["SongSearchResult[]"])
 ```
 
@@ -458,3 +462,31 @@ flowchart TD
 > `GET /songs/{id}/status` is a sibling lightweight check — `{ exists, cached }`
 > where `cached` means an embedding is already stored — used by the frontend to
 > warn about slow "cold" seeds.
+
+---
+
+## 10a. Lazy album covers (`GET /songs/{track_id}/cover`)
+
+Same resolve-and-persist pattern as the Spotify link (section 10), for album
+art. Keeps Deezer/iTunes off the `/songs/search` critical path: the frontend
+fires one call per uncovered search-result row and the row pops in when it
+resolves. The definitive miss is persisted too (`cover_checked_at` set, no
+`image`), so a coverless track costs upstream calls **once ever**; a full
+provider outage (`CoversUnavailable` → `checked=false`) is *not* persisted and
+retries next time.
+
+```mermaid
+flowchart TD
+    req(["GET /songs/{id}/cover"]) --> row{"song in DB?"}
+    row -->|no| e404["404"]
+    row -->|yes| haveimg{"real image stored?"}
+    haveimg -->|yes| serve["return stored<br/>{url, checked: true}"]
+    haveimg -->|no| checked{"cover_checked_at set?"}
+    checked -->|yes| miss["return {url: null, checked: true}<br/>(definitive miss)"]
+    checked -->|no| resolve["covers.resolve_cover<br/>Deezer → iTunes → artist photo"]
+    resolve -->|CoversUnavailable| nodef["return {url: null, checked: false}<br/>NOT persisted → retried later"]
+    resolve -->|url| persist[("UPDATE songs<br/>image, cover_checked_at = now()")]
+    resolve -->|definitive null| persistmiss[("UPDATE songs<br/>cover_checked_at = now()")]
+    persist --> serve2["return {url, checked: true}"]
+    persistmiss --> miss2["return {url: null, checked: true}"]
+```

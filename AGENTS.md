@@ -149,7 +149,7 @@ value simply means "no folding" for that row (graceful), backfilled via
 
 ### The core pipeline
 
-1. User searches → `GET /songs/search` (local DB + Last.fm in parallel, covers from Deezer/iTunes)
+1. User searches → `GET /songs/search` (local DB + Last.fm in parallel; missing covers resolve lazily via `GET /songs/{track_id}/cover`)
 2. User drops a song on the graph → `POST /graph/seed`
 3. Backend builds the seed's tag embedding (cache-aware), runs ANN search, then
    bootstraps + recursively expands the candidate pool from Last.fm `getSimilar`
@@ -288,6 +288,13 @@ confidence score and drives normalization.
 
 `is_broken_image()` detects the Last.fm placeholder so we never persist it, and
 upserts use `COALESCE` so a known-good cover is never regressed to NULL.
+`resolve_cover()` raises `CoversUnavailable` when *every* provider errors, so a
+transient outage is never negative-cached as "no cover" (`get_cover_url()` is
+the never-raising wrapper used by ingest/backfill). Resolution happens lazily
+per track via `GET /songs/{track_id}/cover` — never inline in `/songs/search` —
+and the outcome (hit *or* definitive miss) is persisted via `image` +
+`cover_checked_at`. Both `covers.py` and `lastfm.py` use a shared
+`requests.Session` for keep-alive, and cover providers time out at 2s.
 
 ---
 
@@ -318,6 +325,7 @@ CREATE TABLE songs (
     tags       jsonb,                  -- raw blended {tag: count} dict (dominant_tags / /features read this)
     spotify_url        TEXT,           -- cached open.spotify.com link (NULL = none)
     spotify_checked_at TIMESTAMPTZ,    -- when we resolved it (NULL = never looked up)
+    cover_checked_at   TIMESTAMPTZ,    -- when cover resolution ran (NULL = never; set + no image = definitive miss)
     canonical_key      TEXT,           -- sha1(artist|||canonical_title): folds cosmetic variants (issue #11)
     created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -407,8 +415,25 @@ we haven't embedded yet. Embedding happens lazily on seed / features / playlist.
 GET /songs/search?q={query}
 ```
 Local DB ILIKE search + Last.fm `track.search` run in parallel, merged
-(Last.fm first, then local-only), capped at 15. Reuses cached covers; only calls
-Deezer/iTunes for tracks missing a real one. Upserts everything into `songs`.
+(Last.fm first, then local-only), capped at 15. Upserts everything into
+`songs`. **Never blocks on cover resolution** — rows ship with their cached
+cover (or `null`), and the frontend lazily fills in the missing ones via
+`GET /songs/{track_id}/cover` per row.
+
+```
+GET /songs/{track_id}/cover
+```
+Lazily resolves a track's album cover (Deezer → iTunes → Deezer artist photo).
+Returns `{ url, checked }` — `url` is the cover URL or `null`; `checked` is
+`false` only when *every* provider errored (`CoversUnavailable`), which is not a
+definitive miss and isn't persisted. Persisted on `songs` (`image` +
+`cover_checked_at`): the first call resolves and stores the answer — including
+the definitive miss, so a coverless track is looked up once ever — and later
+calls are free DB reads. Intentionally on the default rate limit (not
+`RATE_LIMIT_HEAVY`): the frontend fires one per uncovered search result, and
+the persistence bounds upstream fan-out to once per track. The frontend mirrors
+this with an in-memory per-session cache in `api.ts` (`getSongCover`) that only
+caches `checked=true` answers and dedupes in-flight calls.
 
 ```
 GET /songs/{track_id}/status
@@ -572,7 +597,7 @@ discover/
 │   ├── models.py             # pydantic request/response models
 │   │
 │   ├── routers/
-│   │   ├── songs.py          # search, status, features, backfill-covers
+│   │   ├── songs.py          # search, lazy cover, status, spotify link, features, backfills
 │   │   ├── graph.py          # GET /graph, POST /graph/seed (+ bootstrap/expansion)
 │   │   ├── recommendations.py# ANN + steering + MMR + backfill + top-up
 │   │   ├── feedback.py       # accept/reject

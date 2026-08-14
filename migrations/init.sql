@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS songs (
     tags                 jsonb,
     spotify_url          TEXT,
     spotify_checked_at   TIMESTAMPTZ,
+    cover_checked_at     TIMESTAMPTZ,
     canonical_key        TEXT,
     created_at           TIMESTAMPTZ DEFAULT now()
 );

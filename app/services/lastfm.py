@@ -3,12 +3,16 @@ from app.config import LASTFM_API_KEY
 
 BASE_URL = "https://ws.audioscrobbler.com/2.0"
 
+# One shared session → TCP/TLS keep-alive across calls. Safe to share across
+# threads here because we never mutate session state (headers/cookies).
+_session = requests.Session()
 
-def _request(method: str, **params):
+
+def _request(method: str, timeout: int = 10, **params):
     params["method"] = method
     params["api_key"] = LASTFM_API_KEY
     params["format"] = "json"
-    resp = requests.get(BASE_URL, params=params, timeout=10)
+    resp = _session.get(BASE_URL, params=params, timeout=timeout)
     resp.raise_for_status()
     return resp.json()
 
@@ -55,7 +59,9 @@ def get_artist_top_tags(artist: str) -> dict:
     asks last.fm for tracks similar to a given one, ideally we want to use our vectordb but at the start we'll probably be using this a lot since our db will be quite sparse
 """
 def search_tracks(query: str, limit: int = 10) -> list:
-    data = _request("track.search", track=query, limit=limit)
+    # Shorter timeout than the default: this call bounds the user-facing
+    # /songs/search latency, so a hung Last.fm must degrade to local-only fast.
+    data = _request("track.search", timeout=5, track=query, limit=limit)
     tracks = data.get("results", {}).get("trackmatches", {}).get("track", [])
 
     results = []
